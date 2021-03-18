@@ -15,13 +15,13 @@ def get_data(filename, batch_size=20, eval_batch_size=10, device='cpu'):
     #clean time_series :
     def clean_time_series(filename):
         x_tl = []
-        name='{}'.format(filename)
+        name='./data/{}.csv'.format(filename)
         with open(name, "r") as file:
             reader = csv.reader(file, delimiter=',')
             for line in reader:
                 x_tl.append(line)
-            time_series = np.array(x_tl)
-            time_series = [float(s) for s in time_series if s != '']
+        x_tl=x_tl[0] #petite astuce : x_tl est en faite une ligne dans une ligne
+        time_series = [float(s) for s in x_tl if s != '']
         print('---------- time_series len = {} ------------'.format(len(time_series)))
         return(time_series)
 

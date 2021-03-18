@@ -1,6 +1,11 @@
 import torch
 import torch.nn as nn
 import time
+import argparse
+from model import *
+import generate_signal as gs
+import torch.nn as nn
+from load_data import get_data
 
 def main(name,device):
 
@@ -21,18 +26,16 @@ def main(name,device):
    emsize=200
    nhid=200
    nlayers=2
-   nheadd=2
+   nhead=2
    dropout=0.2
    bptt=1
    ntokens=12
       
    model=TransformerModel(ntokens, emsize, nhead, nhid, nlayers, bptt, dropout).to(device)
 
-   lr=5
    model.criterion= nn.CrossEntropyLoss()
-   model.optimiser=torch.opti.SGD(model.parameters(),lr=lr)
    model.scheduler = torch.optim.lr_scheduler.StepLR(model.optimizer, 1.0, gamma=0.95)
-
+   epochs=3
 
    best_model, best_val_loss=model.fit(train_set, validation_set, epochs)
       
@@ -48,4 +51,4 @@ if __name__ == '__main__':
     parser.add_argument('name', help='Name of the signal you will create')
     parser.add_argument('device', help='Processor used for torch tensor')
     args=parser.parse_args()
-    main(name,device)
+    main(args.name,args.device)

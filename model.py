@@ -1,5 +1,6 @@
 import math
 import torch
+import time
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -12,12 +13,12 @@ class TransformerModel(nn.Module):
         self.pos_encoder = PositionalEncoding(ninp, dropout)
         encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-        self.encoder=Embedding(ntoken, ninp)
+        self.encoder=nn.Embedding(ntoken, ninp)
         self.ninp = ninp
         self.decoder = nn.Linear(ninp, ntoken)
         self.device = device
         self.criterion=None
-        self.optimizer=None
+        self.optimizer=torch.optim.SGD(self.parameters(),lr=5)
         self.scheduler=None
         self.init_weights()
         print('|T R A N S F O R M E R : Optimus Prime is ready |')
@@ -40,7 +41,9 @@ class TransformerModel(nn.Module):
         output = self.decoder(output)
         return output
 
-    def train(self,train_data):
+
+#TODO : bouger ce truc #
+    def train(self, train_data):
         self.train() # Turn on the train mode
         total_loss = 0.
         start_time = time.time()
@@ -70,20 +73,20 @@ class TransformerModel(nn.Module):
                 total_loss = 0
                 start_time = time.time()
 
-   def evaluate(self, data_source):
-       self.eval() # Turn on the evaluation mode
-       total_loss = 0.
-       src_mask = TransformerModel.generate_square_subsequent_mask(self.bptt).to(self.device)
-       with torch.no_grad():
-           for i in range(0, data_source.size(0) - 1, self.bptt):
-               data, targets = get_batch(data_source, i)
-               if data.size(0) != bptt:
-                   src_mask = TransformerModel.generate_square_subsequent_mask(data.size(0)).to(self.device)
-                   output = self(data, src_mask)
-                   output_flat = output.view(-1, self.ntokens)
-                   total_loss += len(data) * self.criterion(output_flat, targets).item()
-       return total_loss / (len(data_source) - 1)
-   
+    def evaluate(self, data_source):
+        self.eval(data_source) # Turn on the evaluation mode
+        total_loss = 0.
+        src_mask = TransformerModel.generate_square_subsequent_mask(self.bptt).to(self.device)
+        with torch.no_grad():
+            for i in range(0, data_source.size(0) - 1, self.bptt):
+                data, targets = get_batch(data_source, i)
+                if data.size(0) != bptt:
+                    src_mask = TransformerModel.generate_square_subsequent_mask(data.size(0)).to(self.device)
+                    output = self(data, src_mask)
+                    output_flat = output.view(-1, self.ntokens)
+                    total_loss += len(data) * self.criterion(output_flat, targets).item()
+        return total_loss / (len(data_source) - 1)
+
     def fit(self, train_data, val_data, epochs):
         best_val_loss=float("inf")
         best_model=None
