@@ -40,7 +40,7 @@ class TransformerModel(nn.Module):
         output = self.decoder(output)
         return output
 
-    def train(self,train_data):
+    def training(self,train_data):
         self.train() # Turn on the train mode
         total_loss = 0.
         start_time = time.time()
