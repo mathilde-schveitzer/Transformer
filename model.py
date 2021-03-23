@@ -3,106 +3,134 @@ import torch
 import time
 import torch.nn as nn
 import torch.nn.functional as F
+from load_data import get_batch
 
 class TransformerModel(nn.Module):
 
-    def __init__(self, ntoken, ninp, nhead, nhid, nlayers, bptt, dropout=0.5, device=torch.device('cpu')):
+    def __init__(self, ntoken, ninp, nhead, nhid, nlayers, bptt, learning_rate=1e-5, dropout=0.5, device=torch.device('cpu')):
         super(TransformerModel, self).__init__()
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
+     #   self.ntokens=ntoken
         self.model_type = 'Transformer'
-        self.pos_encoder = PositionalEncoding(ninp, dropout)
-        encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout)
+        self.embed_dims=ninp*nhead
+     #   self.embed_dims=6
+        self.pos_encoder = PositionalEncoding(self.embed_dims, dropout)
+        encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-        self.encoder=nn.Embedding(ntoken, ninp)
-        self.ninp = ninp
-        self.decoder = nn.Linear(ninp, ntoken)
+       # self.encoder=nn.Embedding(ntoken, ninp)
+       # self.decoder = nn.Linear(ninp, ntoken)
         self.device = device
-        self.criterion=None
+        self.bptt = bptt
+#        self.criterion=None
         self.optimizer=torch.optim.SGD(self.parameters(),lr=5)
-        self.scheduler=None
+#       self.scheduler=None
+        self._loss=F.mse_loss
         self.init_weights()
         print('|T R A N S F O R M E R : Optimus Prime is ready |')
         
-    def generate_square_subsequent_mask(self, sz):
-        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-        return mask
+    # def generate_square_subsequent_mask(self, sz):
+    #     mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+    #     mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+    #     return mask
 
     def init_weights(self):
         initrange = 0.1
-        self.encoder.weight.data.uniform_(-initrange, initrange)
-        self.decoder.bias.data.zero_()
-        self.decoder.weight.data.uniform_(-initrange, initrange)
+    #     self.encoder.weight.data.uniform_(-initrange, initrange)
+    #     self.decoder.bias.data.zero_()
+    #     self.decoder.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, src, src_mask):
-        src = self.encoder(src) * math.sqrt(self.ninp)
-        src = self.pos_encoder(src)
-        output = self.transformer_encoder(src, src_mask)
-        output = self.decoder(output)
+    def forward(self, input):
+      # input = x * math.sqrt(self.embed_dims)
+      # src = self.pos_encoder(src)
+        output = self.transformer_encoder(input)
+      # output = self.decoder(output)
         return output
-
-    def training(self,train_data):
-        self.train() # Turn on the train mode
+    
+    def do_training(self,train_data):
+        def flatten(vect):
+            n=len(vect.size())
+            dim=1
+            for k in range(n):
+                dim=dim*vect.size()[k]
+            return(vect.reshape(dim))
+        self.train() # Turn on the train mode (herited from module)
         total_loss = 0.
         start_time = time.time()
-        src_mask = TransformerModel.generate_square_subsequent_mask(self.bptt).to(self.device)
+      #  src_mask = self.generate_square_subsequent_mask(self.bptt).to(self.device)
         for batch, i in enumerate(range(0, train_data.size(0) - 1, self.bptt)):
-            data, targets = get_batch(train_data, i)
+            data, targets = get_batch(train_data, i, self.bptt)
             self.optimizer.zero_grad()
-            if data.size(0) != bptt :
-                src_mask = TransformerModel.generate_square_subsequent_mask(data.size(0)).to(self.device)
-                output = self(data, src_mask)
-                loss = self.criterion(output.view(-1, self.ntokens), targets)
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
-                self.optimizer.step()
+            output = self(data)
+            output=flatten(output)
+            loss=self._loss(output, targets)
+           # loss = self.criterion(output.view(-1, self.ntokens), targets)
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
+            self.optimizer.step()
 
             total_loss += loss.item()
             log_interval = 200
             if batch % log_interval == 0 and batch > 0:
                 cur_loss = total_loss / log_interval
                 elapsed = time.time() - start_time
-                print('| epoch {:3d} | {:5d}/{:5d} batches | '
-                      'lr {:02.2f} | ms/batch {:5.2f} | '
+                print('| epoch {:3d} | {:5d}/{:5d} batches | ms/batch {:5.2f} | '
                       'loss {:5.2f} | ppl {:8.2f}'.format(
-                          epoch, batch, len(train_data) // bptt, scheduler.get_lr()[0],
+                          epoch, batch, len(train_data) // self.bptt,
                           elapsed * 1000 / log_interval,
                           cur_loss, math.exp(cur_loss)))
                 total_loss = 0
                 start_time = time.time()
 
     def evaluate(self, data_source):
-        self.eval(data_source) # Turn on the evaluation mode
+
+        def flatten(vect):
+            n=len(vect.size())
+            dim=1
+            for k in range(n):
+                dim=dim*vect.size()[k]
+            return(vect.reshape(dim))
+        
+        self.eval() # Turn on the evaluation mode (herited from module)
         total_loss = 0.
-        src_mask = TransformerModel.generate_square_subsequent_mask(self.bptt).to(self.device)
+      #  src_mask = self.generate_square_subsequent_mask(self.bptt).to(self.device)
         with torch.no_grad():
             for i in range(0, data_source.size(0) - 1, self.bptt):
-                data, targets = get_batch(data_source, i)
-                if data.size(0) != bptt:
-                    src_mask = TransformerModel.generate_square_subsequent_mask(data.size(0)).to(self.device)
-                    output = self(data, src_mask)
-                    output_flat = output.view(-1, self.ntokens)
-                    total_loss += len(data) * self.criterion(output_flat, targets).item()
+                data, targets = get_batch(data_source, i, self.bptt)
+               
+                #if data.size(0) != self.bptt:
+                   # src_mask = self.generate_square_subsequent_mask(data.size(0)).to(self.device)
+                output = self(data)
+          #     output_flat = output.view(-1, self.ntokens)
+    
+                output_flat=flatten(output)
+                total_loss += len(data) * self._loss(output_flat, targets).item()
         return total_loss / (len(data_source) - 1)
 
+
+
     def fit(self, train_data, val_data, epochs):
+        
         best_val_loss=float("inf")
         best_model=None
         for epoch in range(1, epochs + 1):
             epoch_start_time = time.time()
-            self.train(train_data)
+           
+            self.do_training(train_data)
+           
             val_loss = self.evaluate(val_data)
+            train_loss = self.evaluate(train_data)
+            
             print('-' * 89)
-            print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
-                  'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
-                                             val_loss, math.exp(val_loss)))
+            print('''| epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | train loss {:5.2f} |
+                  valid ppl {:8.2f}'''.format(epoch, (time.time() - epoch_start_time), 
+                                             val_loss, train_loss, math.exp(val_loss)))
             print('-' * 89)
-
+            best_model=self
             if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                best_model = model
+                best_val_loss = train_loss
+            #    best_model = self
         
-            self.scheduler.step()
+           # self.scheduler.step()
         return(best_model, best_val_loss)
 
 class PositionalEncoding(nn.Module):

@@ -30,17 +30,17 @@ def get_data(filename, batch_size=20, eval_batch_size=10, device='cpu'):
     ntest=int(0.75*n)
     nvalid=int(0.875*n)
 
-    xtrain=torch.from_numpy(np.array(cleaned_time_series[:ntest])).to(device)
-    xtest=torch.from_numpy(np.array(cleaned_time_series[ntest:nvalid])).to(device)
-    xval=torch.from_numpy(np.array(cleaned_time_series[nvalid:])).to(device)
-
+    xtrain=torch.tensor(np.array(cleaned_time_series[:ntest]), dtype=torch.float32).to(device)
+    xtest=torch.tensor(np.array(cleaned_time_series[ntest:nvalid]),dtype=torch.float32).to(device)
+    xval=torch.tensor(np.array(cleaned_time_series[nvalid:]),dtype=torch.float32).to(device)
+    
     # at this stage : 1 line of size npts
 
     def batchify(data, bsz):
         # Divide the dataset into bsz parts.
         nbatch = data.size(0) // bsz
         # Trim off any extra elements that wouldn't cleanly fit (remainders).
-        data = data.narrow(0, 0, nbatch * bsz)
+        data = data.narrow(0, 0, nbatch * bsz) 
         # Evenly divide the data across the bsz batches.
         data = data.view(bsz, -1).t().contiguous()
         return data
@@ -49,4 +49,13 @@ def get_data(filename, batch_size=20, eval_batch_size=10, device='cpu'):
     val_data= batchify(xval, eval_batch_size)
     test_data = batchify(xtest, eval_batch_size)
 
+    
     return(train_data,test_data,val_data)
+
+def get_batch(source,i,bptt):
+    seq_len=min(bptt, len(source)-(i+1))
+    data=source[i:i+seq_len]
+    data=torch.reshape(data,(seq_len,source.size(1),1))
+    target=source[i+1:i+1+seq_len].reshape(-1) # on perd une dimension
+        
+    return data, target # en sortie on a bptt donnees, de longueurs batch_size

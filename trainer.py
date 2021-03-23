@@ -2,10 +2,9 @@ import torch
 import torch.nn as nn
 import time
 import argparse
-from model import *
 import generate_signal as gs
-import torch.nn as nn
 from load_data import get_data
+from model import *
 
 def main(name,device):
 
@@ -18,32 +17,36 @@ def main(name,device):
    gs.register_signal(sig[0],'./data/{}'.format(name))
    print('----we got it : time to create the ndarray-----')
 
-   train_set,_,validation_set=get_data(name,device=device)
-
-   print('--------------- we got the data -------------')
+   train_set,test_set,validation_set=get_data(name,device=device)
    
+   print('--------------- we got the data -------------')
+   print(train_set)
+   print('-----------train_set.shape()--------')
+   print(train_set.shape)
+   print(train_set.size)
    #Initiate an instance :
-   emsize=200
-   nhid=200
+   ninp=1
+   nhid=10
    nlayers=2
-   nhead=2
+   nhead=1
    dropout=0.2
-   bptt=1
+   bptt=100
    ntokens=12
       
-   model=TransformerModel(ntokens, emsize, nhead, nhid, nlayers, bptt, dropout).to(device)
+   model=TransformerModel(ntokens, ninp, nhead, nhid, nlayers, bptt, dropout).to(device)
 
-   model.criterion= nn.CrossEntropyLoss()
-   model.scheduler = torch.optim.lr_scheduler.StepLR(model.optimizer, 1.0, gamma=0.95)
-   epochs=3
+   lr=5
+#  model.scheduler = torch.optim.lr_scheduler.StepLR(model.optimizer, 1.0, gamma=0.95)
 
+   epochs=10
    best_model, best_val_loss=model.fit(train_set, validation_set, epochs)
       
    #Evaluate the model with the test dataset
 
-   test_loss = evaluate(best_model, test_data)
+   test_loss = best_model.evaluate(test_set)
+   train_loss = best_model.evaluate(train_set)
    print('=' * 89)
-   print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(test_loss, math.exp(test_loss)))
+   print('| End of training | test loss {:5.2f} | train loss {:5.2f} | test ppl {:8.2f}'.format(test_loss, train_loss, math.exp(test_loss)))
    print('=' * 89)
 
 if __name__ == '__main__':
