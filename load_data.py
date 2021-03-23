@@ -2,7 +2,7 @@ import csv
 import numpy as np
 import torch
 
-def get_data(filename, batch_size=20, eval_batch_size=10, device='cpu'):
+def get_data(filename, batch_size=200, eval_batch_size=100, device='cpu'):
     """
     Create the set of datas that will be used to train the neural networks, from the file filename
     

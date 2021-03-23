@@ -1,3 +1,4 @@
+import numpy as np
 import math
 import torch
 import time
@@ -20,10 +21,14 @@ class TransformerModel(nn.Module):
        # self.encoder=nn.Embedding(ntoken, ninp)
        # self.decoder = nn.Linear(ninp, ntoken)
         self.device = device
+        self.to(self.device)
         self.bptt = bptt
 #        self.criterion=None
-        self.optimizer=torch.optim.SGD(self.parameters(),lr=5)
-#       self.scheduler=None
+        self.parameters = []
+        self.parameters = nn.ParameterList(self.parameters)
+#        self.optimizer=torch.optim.SGD(params=self.parameters(), lr=5)
+        self.optimizer=torch.optim.Adam(lr=1e-1, params=self.parameters())
+        self.scheduler=None
         self._loss=F.mse_loss
         self.init_weights()
         print('|T R A N S F O R M E R : Optimus Prime is ready |')
@@ -60,9 +65,9 @@ class TransformerModel(nn.Module):
         for batch, i in enumerate(range(0, train_data.size(0) - 1, self.bptt)):
             data, targets = get_batch(train_data, i, self.bptt)
             self.optimizer.zero_grad()
-            output = self(data)
-            output=flatten(output)
-            loss=self._loss(output, targets)
+            output = self(data).to(self.device)
+            output=flatten(output).to(self.device)
+            loss=self._loss(output, targets.to(self.device))
            # loss = self.criterion(output.view(-1, self.ntokens), targets)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
@@ -81,7 +86,7 @@ class TransformerModel(nn.Module):
                 total_loss = 0
                 start_time = time.time()
 
-    def evaluate(self, data_source):
+    def evaluate(self, data_source, val):
 
         def flatten(vect):
             n=len(vect.size())
@@ -91,25 +96,36 @@ class TransformerModel(nn.Module):
             return(vect.reshape(dim))
         
         self.eval() # Turn on the evaluation mode (herited from module)
-        total_loss = 0.
+        test_loss = []
+        for i in range(0, data_source.size(0)-1, self.bptt):
+            data,targets=get_batch(data_source, i, self.bptt)
+            output=self(data).to(self.device)
+            _loss=self._loss(flatten(output).to(self.device),targets.to(self.device)).item()
+            test_loss.append(_loss)
+        mean_loss=np.mean(test_loss)
+        if val :
+            print(f'Validation loss : {mean_loss:.4f}')
+        else :
+            print(f'Test loss : {mean_loss:.4f}')
+        return(mean_loss)
       #  src_mask = self.generate_square_subsequent_mask(self.bptt).to(self.device)
-        with torch.no_grad():
-            for i in range(0, data_source.size(0) - 1, self.bptt):
-                data, targets = get_batch(data_source, i, self.bptt)
+        # with torch.no_grad():
+        #     for i in range(0, data_source.size(0) - 1, self.bptt):
+        #         data, targets = get_batch(data_source, i, self.bptt)
                
-                #if data.size(0) != self.bptt:
-                   # src_mask = self.generate_square_subsequent_mask(data.size(0)).to(self.device)
-                output = self(data)
-          #     output_flat = output.view(-1, self.ntokens)
+        #         #if data.size(0) != self.bptt:
+        #            # src_mask = self.generate_square_subsequent_mask(data.size(0)).to(self.device)
+        #         output = self(data)
+        #   #     output_flat = output.view(-1, self.ntokens)
     
-                output_flat=flatten(output)
-                total_loss += len(data) * self._loss(output_flat, targets).item()
-        return total_loss / (len(data_source) - 1)
+        #         output_flat=flatten(output)
+        #         total_loss += len(data) * self._loss(output_flat, targets).item()
+       # return total_loss / (len(data_source) - 1)
 
 
 
     def fit(self, train_data, val_data, epochs):
-        
+        self.scheduler=torch.optim.lr_scheduler.StepLR(self.optimizer, 1.0, gamma=0.95)
         best_val_loss=float("inf")
         best_model=None
         for epoch in range(1, epochs + 1):
@@ -117,8 +133,8 @@ class TransformerModel(nn.Module):
            
             self.do_training(train_data)
            
-            val_loss = self.evaluate(val_data)
-            train_loss = self.evaluate(train_data)
+            val_loss = self.evaluate(val_data, True)
+            train_loss = self.evaluate(train_data, False)
             
             print('-' * 89)
             print('''| epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | train loss {:5.2f} |
