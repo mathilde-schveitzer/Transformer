@@ -15,7 +15,7 @@ def get_data(filename, batch_size=200, eval_batch_size=100, device='cpu'):
     #clean time_series :
     def clean_time_series(filename):
         x_tl = []
-        name='./data/{}.csv'.format(filename)
+        name='./data/{}/signal.csv'.format(filename)
         with open(name, "r") as file:
             reader = csv.reader(file, delimiter=',')
             for line in reader:
@@ -48,7 +48,7 @@ def get_data(filename, batch_size=200, eval_batch_size=100, device='cpu'):
     train_data=batchify(xtrain, batch_size)
     val_data= batchify(xval, eval_batch_size)
     test_data = batchify(xtest, eval_batch_size)
-
+    # train_data.shape --> nb_batch, batch_size
     
     return(train_data,test_data,val_data)
 
@@ -59,3 +59,11 @@ def get_batch(source,i,bptt):
     target=source[i+1:i+1+seq_len].reshape(-1) # on perd une dimension
         
     return data, target # en sortie on a bptt donnees, de longueurs batch_size
+
+def flatten(vect):
+    n=len(vect.size())
+    dim=1
+    for k in range(n):
+        dim=dim*vect.size()[k]
+    return(vect.reshape(dim))
+    

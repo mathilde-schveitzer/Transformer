@@ -10,7 +10,7 @@ def main(name,device):
 
    # we generate the signal which will be analyzed
    length_seconds, sampling_rate=10000, 150 #that makes 15000 pts
-   freq_list=[2,5]
+   freq_list=[0.05,0.5,5]
    print('----creating the signal, plz wait------')
    sig=gs.generate_signal(length_seconds, sampling_rate, freq_list)
    print('finish : we start storing it in a csv file')
@@ -34,7 +34,7 @@ def main(name,device):
    nlayers=2
    nhead=3
    dropout=0.2
-   bptt=100
+   bptt=10
    ntokens=12
       
    model=TransformerModel(ntokens, ninp, nhead, nhid, nlayers, bptt, dropout,device=device)

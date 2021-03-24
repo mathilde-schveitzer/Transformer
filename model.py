@@ -27,8 +27,8 @@ class TransformerModel(nn.Module):
 #        self.criterion=None
         self.parameters = []
         self.parameters = nn.ParameterList(self.parameters)
-#        self.optimizer=torch.optim.SGD(params=self.parameters(), lr=5)
-        self.optimizer=torch.optim.Adam(lr=1e-2, params=self.parameters())
+        self.optimizer=torch.optim.SGD(params=self.parameters(), lr=1e-2)
+#        self.optimizer=torch.optim.Adam(lr=1e-2, params=self.parameters())
         self.scheduler=None
         self._loss=F.mse_loss
         self.init_weights()
@@ -61,12 +61,12 @@ class TransformerModel(nn.Module):
             data=data.to(self.device)
             targets=targets.to(self.device)
             self.optimizer.zero_grad()
-            output = self(data).to(self.device)
-            output=ld.flatten(output).to(self.device)
+            output = self(data)
+            output=ld.flatten(output)
             loss=self._loss(output, targets)
            # loss = self.criterion(output.view(-1, self.ntokens), targets)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
+          #  torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
             self.optimizer.step()
 
             total_loss += loss.item()
@@ -110,8 +110,8 @@ class TransformerModel(nn.Module):
            
             self.do_training(train_data)
            
-            val_loss = self.evaluate(val_data, True)
-            train_loss = self.evaluate(train_data, False)
+            val_loss = self.evaluate(val_data, val=True)
+            train_loss = self.evaluate(train_data, val=False)
             store_loss[epoch-1]=train_loss
             store_val_loss[epoch-1]=val_loss
             
@@ -120,7 +120,7 @@ class TransformerModel(nn.Module):
                   valid ppl {:8.2f}'''.format(epoch, (time.time() - epoch_start_time), 
                                              val_loss, train_loss, math.exp(val_loss)))
             print('-' * 89)
-            
+            self.scheduler.step()
        
         np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
         np.savetxt('./data/{}/val_loss.txt'.format(filename), store_val_loss)
