@@ -1,10 +1,11 @@
+import os
 import numpy as np
 import math
 import torch
 import time
 import torch.nn as nn
 import torch.nn.functional as F
-from load_data import get_batch
+import load_data as ld
 
 class TransformerModel(nn.Module):
 
@@ -14,20 +15,20 @@ class TransformerModel(nn.Module):
      #   self.ntokens=ntoken
         self.model_type = 'Transformer'
         self.embed_dims=ninp*nhead
-     #   self.embed_dims=6
-        self.pos_encoder = PositionalEncoding(self.embed_dims, dropout)
-        encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout)
-        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-       # self.encoder=nn.Embedding(ntoken, ninp)
-       # self.decoder = nn.Linear(ninp, ntoken)
         self.device = device
+     #   self.embed_dims=6
+     #   self.pos_encoder = PositionalEncoding(self.embed_dims, dropout)
+        encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout, activation='gelu')
+        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
+        self.encoder=MLP(ninp,self.embed_dims,3,124,device=self.device)
+        self.decoder=MLP(nhead,1,3,124,device=self.device)
         self.to(self.device)
         self.bptt = bptt
 #        self.criterion=None
         self.parameters = []
         self.parameters = nn.ParameterList(self.parameters)
 #        self.optimizer=torch.optim.SGD(params=self.parameters(), lr=5)
-        self.optimizer=torch.optim.Adam(lr=1e-1, params=self.parameters())
+        self.optimizer=torch.optim.Adam(lr=1e-2, params=self.parameters())
         self.scheduler=None
         self._loss=F.mse_loss
         self.init_weights()
@@ -45,29 +46,24 @@ class TransformerModel(nn.Module):
     #     self.decoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, input):
-      # input = x * math.sqrt(self.embed_dims)
-      # src = self.pos_encoder(src)
-        output = self.transformer_encoder(input)
-      # output = self.decoder(output)
-        return output
+        _input = self.encoder(input).to(self.device)
+        output = self.transformer_encoder(_input).to(self.device)
+        _output = self.decoder(output).to(self.device)
+        return _output
     
     def do_training(self,train_data):
-        def flatten(vect):
-            n=len(vect.size())
-            dim=1
-            for k in range(n):
-                dim=dim*vect.size()[k]
-            return(vect.reshape(dim))
         self.train() # Turn on the train mode (herited from module)
         total_loss = 0.
         start_time = time.time()
       #  src_mask = self.generate_square_subsequent_mask(self.bptt).to(self.device)
         for batch, i in enumerate(range(0, train_data.size(0) - 1, self.bptt)):
-            data, targets = get_batch(train_data, i, self.bptt)
+            data, targets = ld.get_batch(train_data, i, self.bptt)
+            data=data.to(self.device)
+            targets=targets.to(self.device)
             self.optimizer.zero_grad()
             output = self(data).to(self.device)
-            output=flatten(output).to(self.device)
-            loss=self._loss(output, targets.to(self.device))
+            output=ld.flatten(output).to(self.device)
+            loss=self._loss(output, targets)
            # loss = self.criterion(output.view(-1, self.ntokens), targets)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
@@ -86,48 +82,29 @@ class TransformerModel(nn.Module):
                 total_loss = 0
                 start_time = time.time()
 
-    def evaluate(self, data_source, val):
-
-        def flatten(vect):
-            n=len(vect.size())
-            dim=1
-            for k in range(n):
-                dim=dim*vect.size()[k]
-            return(vect.reshape(dim))
-        
+    def evaluate(self, data_source, val):  
         self.eval() # Turn on the evaluation mode (herited from module)
         test_loss = []
         for i in range(0, data_source.size(0)-1, self.bptt):
-            data,targets=get_batch(data_source, i, self.bptt)
+            data,targets=ld.get_batch(data_source, i, self.bptt)
             output=self(data).to(self.device)
-            _loss=self._loss(flatten(output).to(self.device),targets.to(self.device)).item()
+            _loss=self._loss(ld.flatten(output).to(self.device),targets.to(self.device)).item()
             test_loss.append(_loss)
         mean_loss=np.mean(test_loss)
         if val :
             print(f'Validation loss : {mean_loss:.4f}')
         else :
-            print(f'Test loss : {mean_loss:.4f}')
+            print(f'Train loss : {mean_loss:.4f}')
         return(mean_loss)
-      #  src_mask = self.generate_square_subsequent_mask(self.bptt).to(self.device)
-        # with torch.no_grad():
-        #     for i in range(0, data_source.size(0) - 1, self.bptt):
-        #         data, targets = get_batch(data_source, i, self.bptt)
-               
-        #         #if data.size(0) != self.bptt:
-        #            # src_mask = self.generate_square_subsequent_mask(data.size(0)).to(self.device)
-        #         output = self(data)
-        #   #     output_flat = output.view(-1, self.ntokens)
-    
-        #         output_flat=flatten(output)
-        #         total_loss += len(data) * self._loss(output_flat, targets).item()
-       # return total_loss / (len(data_source) - 1)
 
 
+    def fit(self, train_data, val_data, epochs, filename):
+        store_val_loss=np.zeros(epochs)
+        store_loss=np.zeros(epochs)
 
-    def fit(self, train_data, val_data, epochs):
-        self.scheduler=torch.optim.lr_scheduler.StepLR(self.optimizer, 1.0, gamma=0.95)
-        best_val_loss=float("inf")
-        best_model=None
+        self.scheduler=torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=500, gamma=0.1)
+       
+
         for epoch in range(1, epochs + 1):
             epoch_start_time = time.time()
            
@@ -135,19 +112,18 @@ class TransformerModel(nn.Module):
            
             val_loss = self.evaluate(val_data, True)
             train_loss = self.evaluate(train_data, False)
+            store_loss[epoch-1]=train_loss
+            store_val_loss[epoch-1]=val_loss
             
             print('-' * 89)
             print('''| epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | train loss {:5.2f} |
                   valid ppl {:8.2f}'''.format(epoch, (time.time() - epoch_start_time), 
                                              val_loss, train_loss, math.exp(val_loss)))
             print('-' * 89)
-            best_model=self
-            if val_loss < best_val_loss:
-                best_val_loss = train_loss
-            #    best_model = self
-        
-           # self.scheduler.step()
-        return(best_model, best_val_loss)
+            
+       
+        np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
+        np.savetxt('./data/{}/val_loss.txt'.format(filename), store_val_loss)
 
 class PositionalEncoding(nn.Module):
 
@@ -166,3 +142,23 @@ class PositionalEncoding(nn.Module):
     def forward(self, x):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
+
+
+class MLP(nn.Module):
+    def __init__(self, input_size, output_size, nhidden, dim_hidd, device):
+        super(MLP, self).__init__()
+        self.input_size=input_size
+        self.output_size=output_size
+        self.fc_layers=[]
+        self.fc_layers.append(nn.Linear(self.input_size, dim_hidd).to(device))
+        for k in range(nhidden):
+            self.fc_layers.append(nn.Linear(dim_hidd, dim_hidd).to(device))
+        self.fc_layers.append(nn.Linear(dim_hidd, self.output_size).to(device))
+        self.device=device
+        self.to(device)
+        
+    def forward(self,x):
+        output=x
+        for f in self.fc_layers :
+            output=f(output)
+        return(output) 
