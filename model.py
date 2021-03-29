@@ -27,10 +27,10 @@ class TransformerModel(nn.Module):
 #        self.criterion=None
         self.parameters = []
         self.parameters = nn.ParameterList(self.parameters)
-        self.optimizer=torch.optim.SGD(params=self.parameters(), lr=1e-2)
-#        self.optimizer=torch.optim.Adam(lr=1e-2, params=self.parameters())
-        self.scheduler=None
-        self._loss=F.mse_loss
+#        self.optimizer=torch.optim.SGD(params=self.parameters(), lr=1e-2)
+        self.optimizer=torch.optim.Adam(lr=1e-2, params=self.parameters())
+#        self.scheduler=None
+        self._loss=F.l1_loss
         self.init_weights()
         print('|T R A N S F O R M E R : Optimus Prime is ready |')
         
@@ -56,7 +56,7 @@ class TransformerModel(nn.Module):
         total_loss = 0.
         start_time = time.time()
       #  src_mask = self.generate_square_subsequent_mask(self.bptt).to(self.device)
-        for batch, i in enumerate(range(0, train_data.size(0) - 1, self.bptt)):
+        for batch,i in enumerate(range(0, train_data.size(0) - 1, self.bptt)):
             data, targets = ld.get_batch(train_data, i, self.bptt)
             data=data.to(self.device)
             targets=targets.to(self.device)
@@ -66,31 +66,38 @@ class TransformerModel(nn.Module):
             loss=self._loss(output, targets)
            # loss = self.criterion(output.view(-1, self.ntokens), targets)
             loss.backward()
-          #  torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
+            torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
             self.optimizer.step()
 
             total_loss += loss.item()
-            log_interval = 200
+            log_interval = 20
             if batch % log_interval == 0 and batch > 0:
                 cur_loss = total_loss / log_interval
                 elapsed = time.time() - start_time
-                print('| epoch {:3d} | {:5d}/{:5d} batches | ms/batch {:5.2f} | '
-                      'loss {:5.2f} | ppl {:8.2f}'.format(
-                          epoch, batch, len(train_data) // self.bptt,
-                          elapsed * 1000 / log_interval,
-                          cur_loss, math.exp(cur_loss)))
+                print(' {:5d}/{:5d} batches | ms/batch {:5.2f} | '
+                       'loss {:5.2f} | ppl {:8.2f}'.format(
+                            batch, len(train_data) // self.bptt,
+                           elapsed * 1000 / log_interval,
+                           cur_loss, math.exp(cur_loss)))
                 total_loss = 0
                 start_time = time.time()
 
     def evaluate(self, data_source, val):  
-        self.eval() # Turn on the evaluation mode (herited from module)
+       # self.eval() # Turn on the evaluation mode (herited from module)
         test_loss = []
         for i in range(0, data_source.size(0)-1, self.bptt):
-            data,targets=ld.get_batch(data_source, i, self.bptt)
+           # print('--------data_source.shape', data_source.shape)
+            data,targets=ld.get_batch(data_source, i, self.bptt, printer=False)
             output=self(data).to(self.device)
-            _loss=self._loss(ld.flatten(output).to(self.device),targets.to(self.device)).item()
-            test_loss.append(_loss)
+            loss=self._loss(ld.flatten(output).to(self.device),targets.to(self.device)).item()
+            test_loss.append(loss)
         mean_loss=np.mean(test_loss)
+        if val :
+            print('---VAL---')
+        else :
+            print('---PAVAL---')
+        print(output.shape)
+        print(targets.shape)
         if val :
             print(f'Validation loss : {mean_loss:.4f}')
         else :
@@ -102,7 +109,7 @@ class TransformerModel(nn.Module):
         store_val_loss=np.zeros(epochs)
         store_loss=np.zeros(epochs)
 
-        self.scheduler=torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=500, gamma=0.1)
+       # self.scheduler=torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=500, gamma=0.1)
        
 
         for epoch in range(1, epochs + 1):
@@ -115,12 +122,12 @@ class TransformerModel(nn.Module):
             store_loss[epoch-1]=train_loss
             store_val_loss[epoch-1]=val_loss
             
-            print('-' * 89)
-            print('''| epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | train loss {:5.2f} |
-                  valid ppl {:8.2f}'''.format(epoch, (time.time() - epoch_start_time), 
-                                             val_loss, train_loss, math.exp(val_loss)))
-            print('-' * 89)
-            self.scheduler.step()
+            # print('-' * 89)
+            # print('''| epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | train loss {:5.2f} |
+            #       valid ppl {:8.2f}'''.format(epoch, (time.time() - epoch_start_time), 
+            #                                  val_loss, train_loss, math.exp(val_loss)))
+            # print('-' * 89)
+            # self.scheduler.step()
        
         np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
         np.savetxt('./data/{}/val_loss.txt'.format(filename), store_val_loss)

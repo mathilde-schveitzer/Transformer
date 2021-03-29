@@ -9,10 +9,10 @@ from model import *
 def main(name,device):
 
    # we generate the signal which will be analyzed
-   length_seconds, sampling_rate=10000, 150 #that makes 15000 pts
+   length_seconds, sampling_rate=1000, 150 #that makes 15000 pts
    freq_list=[0.05,0.5,5]
    print('----creating the signal, plz wait------')
-   sig=gs.generate_signal(length_seconds, sampling_rate, freq_list)
+   sig=gs.generate_signal(length_seconds, sampling_rate, freq_list, add_noise=True)
    print('finish : we start storing it in a csv file')
    path='./data/{}'.format(name)
    if not os.path.exists(path) :
@@ -20,13 +20,16 @@ def main(name,device):
    gs.register_signal(sig[0],'./data/{}/signal'.format(name))
    print('----we got it : time to create the ndarray-----')
 
-   train_set,test_set,validation_set=get_data(name,device=device)
-   
+   train_set,test_set,validation_set=get_data(name, batch_size=30, eval_batch_size=30, device=device)
    print('--------------- we got the data -------------')
    print(train_set)
    print('-----------train_set.shape()--------')
    print(train_set.shape)
    print(train_set.size)
+   print('-----------test_set.shape()--------')
+   print(test_set.shape)
+   print('------------val_set.shape()-------')
+   print(validation_set.shape)
    
    #Initiate an instance :
    ninp=1
@@ -39,7 +42,7 @@ def main(name,device):
       
    model=TransformerModel(ntokens, ninp, nhead, nhid, nlayers, bptt, dropout,device=device)
 
-   epochs=200
+   epochs=30
    model.fit(train_set, validation_set, epochs, name)
       
    #Evaluate the model with the test dataset
@@ -49,6 +52,8 @@ def main(name,device):
    print('=' * 89)
    print('| End of training | test loss {:5.2f} | train loss {:5.2f} | test ppl {:8.2f}'.format(test_loss, train_loss, math.exp(test_loss)))
    print('=' * 89)
+
+   print('---------- Name of the file : {} --------------'.format(name))
 
 if __name__ == '__main__':
     parser=argparse.ArgumentParser()

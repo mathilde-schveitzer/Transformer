@@ -35,8 +35,6 @@ def generate_signal(length_seconds, sampling_rate, frequencies_list, func=[], tr
     
     frequencies_list = np.array(frequencies_list, dtype=object)
     nf=frequencies_list.shape[0]
-    
-    #On complete func pour matcher avec les fréquences fournises
     assert len(func)<=nf, "unuseful functions have been precised"
     while nf>len(func) :
         func.append('sin')
@@ -51,7 +49,6 @@ def generate_signal(length_seconds, sampling_rate, frequencies_list, func=[], tr
     assert bornes[0]<bornes[1], "on doit pouvoir extraire entre les bornes fournises"
     
     if alea==True : 
-        "Première idée : on tire aléatoirement les coefs selon une loi gaussienne dont les caractéristiques sont tirés aléatiorement"
         for k in range(nf) :
             rd.seed=1024
             mu=rd.uniform(bornes[0],bornes[1])
