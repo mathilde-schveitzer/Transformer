@@ -96,9 +96,7 @@ class TransformerModel(nn.Module):
         store_val_loss=np.zeros(epochs)
         store_loss=np.zeros(epochs)
 
-       # self.scheduler=torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=500, gamma=0.1)
-       
-
+      
         for epoch in range(1, epochs + 1):
             epoch_start_time = time.time()
            
@@ -109,12 +107,6 @@ class TransformerModel(nn.Module):
             store_loss[epoch-1]=train_loss
             store_val_loss[epoch-1]=val_loss
             
-            # print('-' * 89)
-            # print('''| epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | train loss {:5.2f} |
-            #       valid ppl {:8.2f}'''.format(epoch, (time.time() - epoch_start_time), 
-            #                                  val_loss, train_loss, math.exp(val_loss)))
-            # print('-' * 89)
-            # self.scheduler.step()
        
         np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
         np.savetxt('./data/{}/val_loss.txt'.format(filename), store_val_loss)

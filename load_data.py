@@ -55,10 +55,6 @@ def get_data(filename, batch_size=200, eval_batch_size=100, device='cpu'):
 def get_batch(source,i,bptt,printer=False):
     seq_len=min(bptt, len(source)-(i+1))
     data=source[i:i+seq_len]
-    if printer :
-        print('--------------get_batch--------------------------------------')
-        print(seq_len,source.size(1),1)
-        print(data.shape)
     data=torch.reshape(data,(seq_len,source.size(1),1))
     target=source[i+1:i+1+seq_len].reshape(-1) # on perd une dimension
         
