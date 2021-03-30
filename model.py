@@ -9,41 +9,24 @@ import load_data as ld
 
 class TransformerModel(nn.Module):
 
-    def __init__(self, ntoken, ninp, nhead, nhid, nlayers, bptt, learning_rate=1e-5, dropout=0.5, device=torch.device('cpu')):
+    def __init__(self, ninp, nhead, nhid, nlayers, bptt, learning_rate=1e-5, dropout=0.5, device=torch.device('cpu')):
         super(TransformerModel, self).__init__()
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
-     #   self.ntokens=ntoken
         self.model_type = 'Transformer'
         self.embed_dims=ninp*nhead
         self.device = device
-     #   self.embed_dims=6
-     #   self.pos_encoder = PositionalEncoding(self.embed_dims, dropout)
         encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout, activation='gelu')
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         self.encoder=MLP(ninp,self.embed_dims,3,124,device=self.device)
         self.decoder=MLP(nhead,1,3,124,device=self.device)
         self.to(self.device)
         self.bptt = bptt
-#        self.criterion=None
         self.parameters = []
         self.parameters = nn.ParameterList(self.parameters)
 #        self.optimizer=torch.optim.SGD(params=self.parameters(), lr=1e-2)
         self.optimizer=torch.optim.Adam(lr=1e-2, params=self.parameters())
-#        self.scheduler=None
         self._loss=F.l1_loss
-        self.init_weights()
         print('|T R A N S F O R M E R : Optimus Prime is ready |')
-        
-    # def generate_square_subsequent_mask(self, sz):
-    #     mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-    #     mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-    #     return mask
-
-    def init_weights(self):
-        initrange = 0.1
-    #     self.encoder.weight.data.uniform_(-initrange, initrange)
-    #     self.decoder.bias.data.zero_()
-    #     self.decoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, input):
         _input = self.encoder(input).to(self.device)
@@ -51,27 +34,28 @@ class TransformerModel(nn.Module):
         _output = self.decoder(output).to(self.device)
         return _output
     
-    def do_training(self,train_data):
+    def do_training(self,train_data,store_loss):
         self.train() # Turn on the train mode (herited from module)
         total_loss = 0.
         start_time = time.time()
-      #  src_mask = self.generate_square_subsequent_mask(self.bptt).to(self.device)
+        
         for batch,i in enumerate(range(0, train_data.size(0) - 1, self.bptt)):
             data, targets = ld.get_batch(train_data, i, self.bptt)
             data=data.to(self.device)
             targets=targets.to(self.device)
             self.optimizer.zero_grad()
             output = self(data)
-            output=ld.flatten(output)
+            output=output.reshape(-1)
             loss=self._loss(output, targets)
-           # loss = self.criterion(output.view(-1, self.ntokens), targets)
+        
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
             self.optimizer.step()
 
             total_loss += loss.item()
-            log_interval = 20
+            log_interval=20
             if batch % log_interval == 0 and batch > 0:
+                store_loss.append(total_loss)
                 cur_loss = total_loss / log_interval
                 elapsed = time.time() - start_time
                 print(' {:5d}/{:5d} batches | ms/batch {:5.2f} | '
@@ -83,23 +67,20 @@ class TransformerModel(nn.Module):
                 start_time = time.time()
 
     def evaluate(self, data_source, val):  
-       # self.eval() # Turn on the evaluation mode (herited from module)
+        self.eval() # Turn on the evaluation mode (herited from module)
         test_loss = []
         for i in range(0, data_source.size(0)-1, self.bptt):
-           # print('--------data_source.shape', data_source.shape)
             data,targets=ld.get_batch(data_source, i, self.bptt, printer=False)
-            output=self(data).to(self.device)
-            loss=self._loss(ld.flatten(output).to(self.device),targets.to(self.device)).item()
+            output=self(data).to(self.device).reshape(-1)
+            loss=self._loss(output.to(self.device),targets.to(self.device)).item()
             test_loss.append(loss)
         mean_loss=np.mean(test_loss)
         if val :
             print('---VAL---')
         else :
             print('---PAVAL---')
-        print(output.shape)
-        print(targets.shape)
         if val :
-            print(f'Validation loss : {mean_loss:.4f}')
+            print(f'Test loss : {mean_loss:.4f}')
         else :
             print(f'Train loss : {mean_loss:.4f}')
         return(mean_loss)
@@ -109,13 +90,12 @@ class TransformerModel(nn.Module):
         store_val_loss=np.zeros(epochs)
         store_loss=np.zeros(epochs)
 
-       # self.scheduler=torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=500, gamma=0.1)
-       
+        loss_test=[]
 
         for epoch in range(1, epochs + 1):
             epoch_start_time = time.time()
            
-            self.do_training(train_data)
+            self.do_training(train_data,loss_test)
            
             val_loss = self.evaluate(val_data, val=True)
             train_loss = self.evaluate(train_data, val=False)
@@ -131,7 +111,8 @@ class TransformerModel(nn.Module):
        
         np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
         np.savetxt('./data/{}/val_loss.txt'.format(filename), store_val_loss)
-
+        np.savetxt('./data/{}/leading_loss.txt'.format(filename), loss_test)
+        
 class PositionalEncoding(nn.Module):
 
     def __init__(self, d_model, dropout=0.1, max_len=5000):

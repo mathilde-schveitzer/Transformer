@@ -28,7 +28,7 @@ def get_data(filename, batch_size=200, eval_batch_size=100, device='cpu'):
     cleaned_time_series=clean_time_series(filename)
     n=len(cleaned_time_series)
     ntest=int(0.75*n)
-    nvalid=int(0.875*n)
+    nvalid=n # no validation test for now
 
     xtrain=torch.tensor(np.array(cleaned_time_series[:ntest]), dtype=torch.float32).to(device)
     xtest=torch.tensor(np.array(cleaned_time_series[ntest:nvalid]),dtype=torch.float32).to(device)
