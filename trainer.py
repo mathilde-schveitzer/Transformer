@@ -41,7 +41,7 @@ def main(name,device):
    #Evaluate the model with the test dataset
 
    test_loss = model.evaluate(test_set, val=True)
-   train_loss = model.evaluate(train_set, val=False)
+   train_loss = model.evaluate(train_set, val=False, predict=True)
    print('=' * 89)
    print('| End of training | test loss {:5.2f} | train loss {:5.2f} | test ppl {:8.2f}'.format(test_loss, train_loss, math.exp(test_loss)))
    print('=' * 89)
