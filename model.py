@@ -9,7 +9,7 @@ import load_data as ld
 
 class TransformerModel(nn.Module):
 
-    def __init__(self, ninp, nhead, nhid, nlayers, nMLP, bptt, learning_rate=1e-5, dropout=0.5, device=torch.device('cpu')):
+    def __init__(self, ninp, nhead, nhid, nlayers, nMLP, bptt, pos_encod=False, learning_rate=1e-5, dropout=0.5, device=torch.device('cpu')):
         super(TransformerModel, self).__init__()
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
         self.model_type = 'Transformer'
@@ -18,6 +18,9 @@ class TransformerModel(nn.Module):
         encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout, activation='gelu')
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         self.encoder=MLP(ninp,self.embed_dims,3, nMLP,device=self.device)
+        self.pos_encod=pos_encod
+        if pos_encod :
+            self.pos_encoder=PositionalEncoding(self.embed_dims,dropout)
         self.decoder=MLP(nhead,1,3, nMLP,device=self.device)
         self.to(self.device)
         self.bptt = bptt
@@ -28,8 +31,10 @@ class TransformerModel(nn.Module):
         print('|T R A N S F O R M E R : Optimus Prime is ready |')
 
     def forward(self, input):
-        _input = self.encoder(input).to(self.device)
-        output = self.transformer_encoder(_input).to(self.device)
+        input = self.encoder(input).to(self.device)
+        if self.pos_encod :
+            input=self.pos_encoder(input)
+        output = self.transformer_encoder(input).to(self.device)
         _output = self.decoder(output).to(self.device)
         return _output
     
