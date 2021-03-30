@@ -9,7 +9,7 @@ import load_data as ld
 
 class TransformerModel(nn.Module):
 
-    def __init__(self, ninp, nhead, nhid, nlayers, bptt, learning_rate=1e-5, dropout=0.5, device=torch.device('cpu')):
+    def __init__(self, ninp, nhead, nhid, nlayers, nMLP, bptt, learning_rate=1e-5, dropout=0.5, device=torch.device('cpu')):
         super(TransformerModel, self).__init__()
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
         self.model_type = 'Transformer'
@@ -17,8 +17,8 @@ class TransformerModel(nn.Module):
         self.device = device
         encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout, activation='gelu')
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-        self.encoder=MLP(ninp,self.embed_dims,3,124,device=self.device)
-        self.decoder=MLP(nhead,1,3,124,device=self.device)
+        self.encoder=MLP(ninp,self.embed_dims,3,nMLP,device=self.device)
+        self.decoder=MLP(nhead,1,3,nMLP,device=self.device)
         self.to(self.device)
         self.bptt = bptt
         self.parameters = []
@@ -45,7 +45,7 @@ class TransformerModel(nn.Module):
             targets=targets.to(self.device)
             self.optimizer.zero_grad()
             output = self(data)
-            output=output.reshape(-1)
+            output=ld.squeeze_last_dim(output).reshape(-1)
             loss=self._loss(output, targets)
         
             loss.backward()
@@ -71,7 +71,8 @@ class TransformerModel(nn.Module):
         test_loss = []
         for i in range(0, data_source.size(0)-1, self.bptt):
             data,targets=ld.get_batch(data_source, i, self.bptt, printer=False)
-            output=self(data).to(self.device).reshape(-1)
+            output=self(data).to(self.device)
+            output=ld.squeeze_last_dim(output).reshape(-1)
             loss=self._loss(output.to(self.device),targets.to(self.device)).item()
             test_loss.append(loss)
         mean_loss=np.mean(test_loss)

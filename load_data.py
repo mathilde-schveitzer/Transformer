@@ -64,10 +64,7 @@ def get_batch(source,i,bptt,printer=False):
         
     return data, target # en sortie on a bptt donnees, de longueurs batch_size
 
-def flatten(vect):
-    n=len(vect.size())
-    dim=1
-    for k in range(n):
-        dim=dim*vect.size()[k]
-    return(vect.reshape(dim))
-    
+def squeeze_last_dim(tensor): # apply before reshape
+    if len(tensor.shape)==3 and tensor.shape[-1]==1 :
+        return tensor[..., 0]
+    return tensor

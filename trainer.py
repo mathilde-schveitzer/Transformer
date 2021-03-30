@@ -25,15 +25,16 @@ def main(name,device):
   
    #Initiate an instance :
    ninp=1
-   nhid=200
+   nhid=240
    nlayers=1
-   nhead=3
+   nMLP=124
+   nhead=8
    dropout=0.1
-   bptt=10
+   bptt=3
 
-   model=TransformerModel(ninp, nhead, nhid, nlayers, bptt, dropout=dropout, device=device)
+   model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, bptt, dropout=dropout, device=device)
 
-   epochs=200
+   epochs=2000
    
    model.fit(train_set, test_set, epochs, name)
       
