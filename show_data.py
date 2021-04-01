@@ -52,7 +52,7 @@ def main(signal, datatype):
         plt.plot(numpy_val_, label='Erreur sur le validation test - without pos encoding')
 
     plt.legend()
-    plt.savefig('./data/{}/loss')
+    plt.savefig('./data/{}/loss.png')
         
 if __name__ == '__main__' :
 
