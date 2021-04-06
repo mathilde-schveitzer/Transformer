@@ -3,8 +3,8 @@ import torch.nn as nn
 import time
 import argparse
 import generate_signal as gs
-from load_data import get_data
-from model import *
+from load_data import get_data_for_TM
+from TM_model import *
 
 def main(name,device):
 
@@ -20,7 +20,7 @@ def main(name,device):
    gs.register_signal(sig[0],'./data/{}/signal'.format(name))
    print('----we got it : time to create the ndarray-----')
 
-   train_set,test_set,_=get_data(name, batch_size=540, eval_batch_size=540, device=device)
+   train_set,test_set,_=get_data_for_TM(name, batch_size=540, eval_batch_size=540, device=device)
    print('--------------- we got the data -------------')
   
    #Initiate an instance :
@@ -30,9 +30,9 @@ def main(name,device):
    nMLP=124
    nhead=8
    dropout=0.1
-   bptt=3
+   bptt=1000
 
-   model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, bptt, dropout=dropout, device=device)
+   model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, bptt, pos_encod=False, dropout=dropout, device=device)
 
    epochs=2000
    

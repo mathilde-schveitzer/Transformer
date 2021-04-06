@@ -1,7 +1,7 @@
 import csv
 import numpy as np
 
-def get_data(backast_length, forecast_length, limit, filename):
+def get_data_for_NB(filename,backast_length, forecast_length, limit):
     
     xtrain = np.array([]).reshape(0, backast_length)
     ytrain = np.array([]).reshape(0, forecast_length)
@@ -10,7 +10,7 @@ def get_data(backast_length, forecast_length, limit, filename):
     ytest=np.array([]).reshape(0, forecast_length)
 
     x_tl = []
-    name='{}'.format(filename)
+    name='./data/{}/signal.csv'.format(filename)
     with open(name, "r") as file:
         reader = csv.reader(file, delimiter=',')
         for line in reader:
