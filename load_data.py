@@ -60,7 +60,7 @@ def get_batch(source,i,bptt,printer=False):
         print(seq_len,source.size(1),1)
         print(data.shape)
     data=torch.reshape(data,(seq_len,source.size(1),1))
-    target=source[i+1:i+1+seq_len].reshape(-1) # on perd une dimension
+    target=source[i+1:i+1+seq_len] # on perd une dimension
         
     return data, target # en sortie on a bptt donnees, de longueurs batch_size
 
