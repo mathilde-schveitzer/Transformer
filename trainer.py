@@ -20,7 +20,7 @@ def main(name,device):
    gs.register_signal(sig[0],'./data/{}/signal'.format(name))
    print('----we got it : time to create the ndarray-----')
 
-   train_set,test_set,_=get_data(name, batch_size=140, eval_batch_size=140, device=device)
+   train_set,test_set,_=get_data(name, batch_size=540, eval_batch_size=540, device=device)
    print('--------------- we got the data -------------')
   
    #Initiate an instance :
@@ -32,7 +32,7 @@ def main(name,device):
    dropout=0.1
    bptt=100
 
-   model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, bptt, pos_encod=False, dropout=dropout, device=device)
+   model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, bptt, pos_encod=True, dropout=dropout, device=device)
 
    epochs=500
    
