@@ -14,6 +14,7 @@ class TransformerModel(nn.Module):
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
         self.model_type = 'Transformer'
         self.embed_dims=ninp*nhead
+       # self.embed_dims=1
         self.device = device
         encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout, activation='gelu')
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
@@ -30,10 +31,13 @@ class TransformerModel(nn.Module):
         self._loss=F.l1_loss
         print('|T R A N S F O R M E R : Optimus Prime is ready |')
 
-    def forward(self, input):
+    def forward(self, input, verbose=False):
         input = self.encoder(input).to(self.device)
         if self.pos_encod :
-            input=self.pos_encoder(input)
+            if verbose :
+                input=self.pos_encoder(input, verbose=True)
+            else :
+                input=self.pos_encoder(input)
         output = self.transformer_encoder(input).to(self.device)
         _output = self.decoder(output).to(self.device)
         return _output
@@ -44,11 +48,15 @@ class TransformerModel(nn.Module):
         start_time = time.time()
     
         for batch,i in enumerate(range(0, train_data.size(0) - 1, self.bptt)):
+            print('------------------------ batch, i : ({},{})---------------'.format(batch,i))
             data, targets = ld.get_batch(train_data, i, self.bptt)
             data=data.to(self.device)
             targets=targets.to(self.device)
             self.optimizer.zero_grad()
-            output = self(data)
+            if batch % 500==0 :
+                output=self(data, verbose=True)
+            else :
+                output = self(data)
             output=ld.squeeze_last_dim(output).reshape(-1)
             loss=self._loss(output, targets)
          
@@ -129,8 +137,15 @@ class PositionalEncoding(nn.Module):
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer('pe', pe)
-
-    def forward(self, x):
+        print('------------------- positionnal encoding initialise --------')
+        print(pe.shape)
+        
+    def forward(self, x, verbose=False):
+        pencod=self.pe[:x.size(0), :]
+        if verbose :
+            print('--------------------------- pencod ---------------------')
+            print(pencod)
+            print(pencod.shape)
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 

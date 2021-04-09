@@ -34,14 +34,14 @@ def main(name,device):
 
    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, bptt, pos_encod=True, dropout=dropout, device=device)
 
-   epochs=500
+   epochs=10
    
    model.fit(train_set, test_set, epochs, name)
       
    #Evaluate the model with the test dataset
 
-   test_loss = model.evaluate(test_set, val=True)
-   train_loss = model.evaluate(train_set, val=False, predict=True)
+#   test_loss = model.evaluate(test_set, val=True)
+#   train_loss = model.evaluate(train_set, val=False, predict=True)
    print('=' * 89)
    print('| End of training | test loss {:5.2f} | train loss {:5.2f} | test ppl {:8.2f}'.format(test_loss, train_loss, math.exp(test_loss)))
    print('=' * 89)
