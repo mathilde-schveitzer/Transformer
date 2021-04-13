@@ -48,7 +48,7 @@ class TransformerModel(nn.Module):
         start_time = time.time()
     
         for batch,i in enumerate(range(0, train_data.size(0) - 1, self.bptt)):
-            print('------------------------ batch, i : ({},{})---------------'.format(batch,i))
+           
             data, targets = ld.get_batch(train_data, i, self.bptt)
             data=data.to(self.device)
             targets=targets.to(self.device)
@@ -143,6 +143,8 @@ class PositionalEncoding(nn.Module):
     def forward(self, x, verbose=False):
         pencod=self.pe[:x.size(0), :]
         if verbose :
+            print('-----------------------x ------------------------')
+            print(x.shape)
             print('--------------------------- pencod ---------------------')
             print(pencod)
             print(pencod.shape)
