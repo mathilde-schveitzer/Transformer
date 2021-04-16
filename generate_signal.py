@@ -118,16 +118,16 @@ def register_signal(signal,identifiant) :
         - signal : an array which cointains signal(s) values (eventually multidimensionnel)
         - time : an array which contains the time values that match with signal
         - identifiant : will be the name of your csv file'''
-    name='{}.csv'.format(identifiant)
-    with open(name, "w", newline='') as csvfile :
-        writer=csv.writer(csvfile, delimiter=',')
-        if np.size(signal.shape)>1 : #signal eventuellement multidimensionnel
-            i=signal.shape[1] #it
-            for k in range(i):
-                writer.writerow(signal) # generalisation par boucles iteratives
-        else :
-            writer.writerow(signal)
-
+    # name='{}.csv'.format(identifiant)
+    # with open(name, "w", newline='') as csvfile :
+    #     writer=csv.writer(csvfile, delimiter=',')
+    #     if np.size(signal.shape)>1 : #signal eventuellement multidimensionnel
+    #         i=signal.shape[1] #it
+    #         for k in range(i):
+    #             writer.writerow(signal) # generalisation par boucles iteratives
+    #     else :
+    #         writer.writerow(signal)
+    np.savetxt(identifiant,signal,header='')
 def generate_multi(n, length_seconds, sampling_rate, frequencies_array, add_noise=0):
 
     assert n==frequencies_array.shape[0], "the number of freq provided does not match the number of signal you specify"
