@@ -10,20 +10,19 @@ import load_data as ld
 
 class TransformerModel(nn.Module):
 
-    def __init__(self, ninp, nhead, nhid, nlayers, nMLP, pos_encod=False, learning_rate=1e-5, dropout=0.5, device=torch.device('cpu')):
+    def __init__(self, ninp, nhead, nhid, nlayers, nMLP, backast_size, forecast_size, pos_encod=False, learning_rate=1e-5, dropout=0.5, device=torch.device('cpu')):
         super(TransformerModel, self).__init__()
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
         self.model_type = 'Transformer'
         self.embed_dims=ninp*nhead
         self.device = device
-        self.ninp=ninp
         encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout, activation='gelu')
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
-        self.encoder=MLP(ninp,self.embed_dims,1, nMLP,device=self.device)
+        self.encoder=MLP(ninp, self.embed_dims, device=device)
         self.pos_encod=pos_encod
         if pos_encod :
             self.pos_encoder=PositionalEncoding(self.embed_dims,dropout)
-        self.decoder=MLP(self.embed_dims,ninp,1, nMLP,device=self.device)
+        self.decoder=Decoder(self.embed_dims, ninp, forecast_size,backast_size,device=device)
         self.to(self.device)
         self.parameters = []
         self.parameters = nn.ParameterList(self.parameters)
@@ -32,8 +31,10 @@ class TransformerModel(nn.Module):
         print('|T R A N S F O R M E R : Optimus Prime is ready |')
 
     def forward(self, input, verbose=False):
+        if verbose :
+            print('----- this is forward -------')
         input = self.encoder(input).to(self.device)
-       
+        print('------- input :', input.shape)
         if self.pos_encod :
             if verbose :
                 input=self.pos_encoder(input, verbose=True)
@@ -48,7 +49,7 @@ class TransformerModel(nn.Module):
         if verbose :
             print('---------- transformer : ', output.shape)
 
-        _output = self.decoder(output).to(self.device)
+        _output = self.decoder(output,verbose=True).to(self.device)
 
         if verbose :
             print('---------- decoder : ',_output.shape)
@@ -67,7 +68,7 @@ class TransformerModel(nn.Module):
         
         for batch_id in shuffled_indices:
            
-            data, targets = xtrain[batch_id],ytrain[batch_id]
+            data, targets = xtrain[batch_id], ytrain[batch_id]
             data=data.transpose(0,1).to(self.device)
             targets=targets.transpose(0,1).to(self.device)
 
@@ -76,8 +77,7 @@ class TransformerModel(nn.Module):
                 print('--------target :', targets.shape)
            
             self.optimizer.zero_grad()
-            output = self(data)
-            # output=ld.squeeze_last_dim(output).reshape(-1)
+            output = self(data, verbose=verbose)
             loss=self._loss(output, targets)
          
             loss.backward()
@@ -158,10 +158,10 @@ class TransformerModel(nn.Module):
             xtrain_list=split(xtrain, bsz)
             ytrain_list=split(ytrain, bsz)
             
-            self.do_training(xtrain_list,ytrain_list,False)
+            self.do_training(xtrain_list,ytrain_list,verbose)
            
-            val_loss = self.evaluate(xtest, ytest, eval_bsz, val=True, verbose=True)
-            train_loss = self.evaluate(xtrain, ytrain, bsz, val=False, verbose=False)
+            val_loss = self.evaluate(xtest, ytest, eval_bsz, val=True, verbose=verbose)
+            train_loss = self.evaluate(xtrain, ytrain, bsz, val=False, verbose=verbose)
             store_loss[epoch-1]=train_loss
             store_val_loss[epoch-1]=val_loss
             
@@ -184,19 +184,19 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pe', pe)
         
     def forward(self, x, verbose=False):
-        pencod=self.pe[:x.size(0), :]
+        pencod=self.pe[:x.shape[0], :]
         if verbose :
             print('-----------------------x ------------------------')
             print(x.shape)
             print('--------------------------- pencod ---------------------')
             print(pencod)
             print(pencod.shape)
-        x = x + self.pe[:x.size(0), :]
-        return self.dropout(x)
+        x = x + self.pe[:x.shape[0], :]
+        return x
 
 
 class MLP(nn.Module):
-    def __init__(self, input_size, output_size, nhidden, dim_hidd, device):
+    def __init__(self, input_size, output_size, nhidden=1, dim_hidd=128, device='cpu'):
         super(MLP, self).__init__()
         self.input_size=input_size
         self.output_size=output_size
@@ -213,3 +213,30 @@ class MLP(nn.Module):
         for f in self.fc_layers :
             output=f(output)
         return(output) 
+
+class MLForecast(nn.Module) :
+    def __init__(self, forecast_size, backast_size, nhidden=1, dim_hidd=128, device='cpu') :
+        super(MLForecast, self).__init__()
+        self.MLP=MLP(backast_size, forecast_size, nhidden, dim_hidd, device)
+        self.to(device)
+
+    def forward(self, x):
+        input=x.transpose(0,2) # "[forecast_size][batch][ninp] => [ninp][batch][forecast_size]"
+        output=self.MLP(x)
+        return(output)
+
+class Decoder(nn.Module) :
+    def __init__(self, ninp, nout, forecast_size, backast_size, nMLP=1, nMLF=1, dim_MLP=128, dim_MLF=128, device='cpu') :
+       super(Decoder, self).__init__()
+       self.MLP=MLP(ninp, nout, nMLP, dim_MLP, device)
+       self.MLF=MLP(backast_size,forecast_size, nMLF, dim_MLF, device)
+       self.to(device)
+
+    def forward(self,x,verbose=False):
+        x=self.MLP(x)
+        if verbose :
+            print('encoder input :', x.shape)
+        output=self.MLF(x.transpose(0,2))
+        if verbose :
+            print('encoder output :', output.shape)            
+        return(output.transpose(0,2))

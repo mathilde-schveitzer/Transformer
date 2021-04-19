@@ -29,7 +29,7 @@ def main(name,device):
    print('----we got it : time to create the ndarray-----')
 
    backast_length=10
-   forecast_length=backast_length #chemin de la facilite
+   forecast_length=4 #chemin de la facilite
 
    nb_data=5000
    xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length,nb_data, name, device=device)
@@ -45,8 +45,8 @@ def main(name,device):
    bsz=128
    eval_bsz=128
    
-   model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, pos_encod=True, dropout=dropout, device=device)
-   model.fit(xtrain, ytrain, xtest, ytest, bsz, eval_bsz, epochs, name)
+   model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length, pos_encod=True, dropout=dropout, device=device)
+   model.fit(xtrain, ytrain, xtest, ytest, bsz, eval_bsz, epochs, name, verbose=True)
    test_losss = model.evaluate(xtest, ytest, eval_bsz, val=True)
    train_losss = model.evaluate(xtrain, ytrain, bsz, val=False)
    print('=' * 89)
