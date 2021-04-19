@@ -32,7 +32,8 @@ def main(name,device):
    forecast_length=4 #chemin de la facilite
 
    nb_data=5000
-   xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length,nb_data, name, device=device)
+
+   xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb_data, sig, device=device)
    print('--------------- we got the data -------------')
    
    #Initiate an instance :

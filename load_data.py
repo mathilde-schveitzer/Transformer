@@ -2,10 +2,8 @@ import csv
 import numpy as np
 import torch
 
-def get_data2(backast_length, forecast_length, nb, name, device='cpu') :
+def get_data2(backast_length, forecast_length, nb, cleaned_time_series, device='cpu') :
 
-    filename='./data/{}/signal.txt'.format(name)
-    cleaned_time_series=np.loadtxt(filename)
     if len(cleaned_time_series>1) :
         dim=cleaned_time_series.shape[0]
         length=cleaned_time_series.shape[1]
@@ -75,4 +73,3 @@ def batchify(x,y,bsz,i,dim) :
     return data, target
     
     
-                               
