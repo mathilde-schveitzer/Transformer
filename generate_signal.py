@@ -1,3 +1,4 @@
+import os
 import csv
 import numpy as np
 import random as rd
@@ -114,12 +115,10 @@ def register_signal(filename) :
          for n,row in enumerate(reader) :
              if n==0 :
                  length=len(row)
-                 print('-----length', length)
                  x=np.empty((1,length))
              else :
                  time_series=np.zeros((1,length))
                  for k,column in enumerate(row) :
-                     print('(k,column):', k, column)
                      time_series[0,k]=column
                     
                  x=np.vstack((x,time_series))

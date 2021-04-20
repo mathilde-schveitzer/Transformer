@@ -2,15 +2,19 @@ import csv
 import numpy as np
 import torch
 
-def get_data2(backast_length, forecast_length, nb, cleaned_time_series, device='cpu') :
+def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='cpu') :
 
-    if len(cleaned_time_series>1) :
-        dim=cleaned_time_series.shape[0]
-        length=cleaned_time_series.shape[1]
+    
+    if len(train_set.shape>1) :
+        assert train_set.shape[0]==test_set.shape[0], 'train and test sets should have same dimension'
+        dim=train_set.shape[0]
+        ntrain=train_set.shape[1]
+        ntest=test_set.shape[0]
     else :
-        length=cleaned_time_series.shape[0]
-    n=length
-    ntest=int(0.75*n)
+        length=test_set.shape[0]
+
+
+   
     xtrain = np.empty((0, backast_length, dim))
     ytrain = np.empty((0, forecast_length, dim))
     
@@ -24,7 +28,7 @@ def get_data2(backast_length, forecast_length, nb, cleaned_time_series, device='
     time_series_cleaned_fortesting_x=np.zeros((1, backast_length, dim))
     time_series_cleaned_fortesting_y=np.zeros((1, forecast_length, dim))
 
-    for i in range(nb) :
+    for i in range(nb) : #on selectionne de facon aleatoire nb "bouts de signaux"
         j=np.random.randint(backast_length, ntest - forecast_length)
         k=np.random.randint(ntest+backast_length, n-forecast_length)
         time_series_cleaned_fortraining_x=cleaned_time_series[:,j- backast_length:j].reshape(1,backast_length,dim)

@@ -24,9 +24,9 @@ def main(name,device):
    if not os.path.exists(path) :
       os.makedirs(path)    
 
-   # gs.register_signal(sig,'./data/{}/signal.txt'.format(name))
-   
-   print('----we got it : time to create the ndarray-----')
+   np.savetxt(sig,path+'txt')
+
+   print('done')
 
    backast_length=10
    forecast_length=4 #chemin de la facilite
