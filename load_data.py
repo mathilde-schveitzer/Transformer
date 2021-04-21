@@ -5,11 +5,11 @@ import torch
 def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='cpu') :
 
     
-    if len(train_set.shape>1) :
+    if len(train_set.shape)>1 :
         assert train_set.shape[0]==test_set.shape[0], 'train and test sets should have same dimension'
         dim=train_set.shape[0]
         ntrain=train_set.shape[1]
-        ntest=test_set.shape[0]
+        ntest=test_set.shape[1]
     else :
         length=test_set.shape[0]
 
@@ -29,12 +29,13 @@ def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='
     time_series_cleaned_fortesting_y=np.zeros((1, forecast_length, dim))
 
     for i in range(nb) : #on selectionne de facon aleatoire nb "bouts de signaux"
-        j=np.random.randint(backast_length, ntest - forecast_length)
-        k=np.random.randint(ntest+backast_length, n-forecast_length)
-        time_series_cleaned_fortraining_x=cleaned_time_series[:,j- backast_length:j].reshape(1,backast_length,dim)
-        time_series_cleaned_fortraining_y=cleaned_time_series[:,j:j+forecast_length].reshape(1,forecast_length, dim)
-        time_series_cleaned_fortesting_x=cleaned_time_series[:,k-backast_length:k].reshape(1,backast_length, dim)
-        time_series_cleaned_fortesting_y=cleaned_time_series[:,k:k+forecast_length].reshape(1,forecast_length,dim)
+        j=np.random.randint(backast_length, ntrain - forecast_length)
+        k=np.random.randint(backast_length, ntest - forecast_length)
+        print('------------------ j et k :', j,k)
+        time_series_cleaned_fortraining_x=train_set[:,j- backast_length:j].reshape(1,backast_length,dim)
+        time_series_cleaned_fortraining_y=train_set[:,j:j+forecast_length].reshape(1,forecast_length, dim)
+        time_series_cleaned_fortesting_x=test_set[:,k-backast_length:k].reshape(1,backast_length, dim)
+        time_series_cleaned_fortesting_y=test_set[:,k:k+forecast_length].reshape(1,forecast_length,dim)
 
         xtrain = np.vstack((xtrain, time_series_cleaned_fortraining_x))
         ytrain = np.vstack((ytrain, time_series_cleaned_fortraining_y))

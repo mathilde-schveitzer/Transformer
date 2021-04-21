@@ -115,12 +115,12 @@ def register_signal(filename) :
          for n,row in enumerate(reader) :
              if n==0 :
                  length=len(row)
-                 x=np.empty((1,length))
+                 x=np.empty((1,length-1))
              else :
-                 time_series=np.zeros((1,length))
+                 time_series=np.zeros((1,length-1))
                  for k,column in enumerate(row) :
-                     time_series[0,k]=column
-                    
+                     if not(k==0): #switch first colomn (time step)
+                         time_series[0,k-1]=column
                  x=np.vstack((x,time_series))
     return(x)
              

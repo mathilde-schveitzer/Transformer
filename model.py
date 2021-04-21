@@ -49,7 +49,7 @@ class TransformerModel(nn.Module):
         if verbose :
             print('---------- transformer : ', output.shape)
 
-        _output = self.decoder(output,verbose=True).to(self.device)
+        _output = self.decoder(output).to(self.device)
 
         if verbose :
             print('---------- decoder : ',_output.shape)
@@ -94,7 +94,7 @@ class TransformerModel(nn.Module):
                 start_time = time.time()
             total_loss=0
 
-    def evaluate(self,xtest, ytest, bsz, val, verbose=False):  
+    def evaluate(self,xtest, ytest, bsz, val, name, predict=False, verbose=False):  
         self.eval() # Turn on the evaluation mode (herited from module)
 
         def split(arr, size):
@@ -105,21 +105,22 @@ class TransformerModel(nn.Module):
                arr = arr[size:]
            arrays.append(arr)
            return arrays
-
+       
         xtest_list=split(xtest, bsz)
         ytest_list=split(ytest,bsz)
-        
         assert len(xtest_list)==len(ytest_list)
 
-        test_loss = []
-
         if verbose :
-            if val :
-                print('---VAL---')
-        
-            else :
-                print('---PAVAL---')
-        
+           if val :
+               print('---VAL---')
+       
+           else :
+               print('---PAVAL---')
+       
+        if predict :
+            prediction=torch.empty_like(ytest)
+            print('prediction.shape', prediction.shape)
+        test_loss = []
         for batch_id in range(0, len(xtest_list)):
        
             data,targets=xtest_list[batch_id],ytest_list[batch_id]
@@ -129,17 +130,24 @@ class TransformerModel(nn.Module):
             loss=self._loss(output,targets.to(self.device)).item()
             test_loss.append(loss)
 
+            if predict :
+                #d'ou l'importance de passer les batch dans l'ordre
+                print('targets.shape',targets.shape)
+                prediction[batch_id:batch_id+targets.shape[1],:,:]=targets.transpose(0,1)                 
         mean_loss=np.mean(test_loss)
 
         if val :
             print(f'Validation loss : {mean_loss:.4f}')
         else :
             print(f'Training loss : {mean_loss :.4f}')
-      
+            
+        if predict :
+            torch.save(prediction,'./data/{}/predictions.pt'.format(name))
+
         return(mean_loss)
 
 
-    def fit(self, xtrain, ytrain, xtest, ytest, bsz, eval_bsz, epochs, filename, verbose=False):
+    def fit(self, xtrain, ytrain, xtest, ytest, bsz, eval_bsz, epochs, filename, save=True, verbose=False):
         store_val_loss=np.zeros(epochs)
         store_loss=np.zeros(epochs)
 
@@ -152,7 +160,12 @@ class TransformerModel(nn.Module):
             arrays.append(arr)
             return arrays
 
-      
+        if save :
+            torch.save(xtrain,'./data/{}/xtrain.pt'.format(filename))
+            torch.save(ytrain,'./data/{}/ytrain.pt'.format(filename))
+            torch.save(xtest,'./data/{}/xtest.pt'.format(filename))
+            torch.save(ytest,'./data/{}/ytest.pt'.format(filename))
+            
         for epoch in range(1, epochs + 1):
             epoch_start_time = time.time()
             xtrain_list=split(xtrain, bsz)
@@ -160,8 +173,8 @@ class TransformerModel(nn.Module):
             
             self.do_training(xtrain_list,ytrain_list,verbose)
            
-            val_loss = self.evaluate(xtest, ytest, eval_bsz, val=True, verbose=verbose)
-            train_loss = self.evaluate(xtrain, ytrain, bsz, val=False, verbose=verbose)
+            val_loss = self.evaluate(xtest, ytest, eval_bsz, True, filename, predict=False, verbose=verbose)
+            train_loss = self.evaluate(xtrain, ytrain, bsz, False, filename, predict=False,verbose=verbose)
             store_loss[epoch-1]=train_loss
             store_val_loss[epoch-1]=val_loss
             
