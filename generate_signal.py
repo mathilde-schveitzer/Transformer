@@ -123,7 +123,8 @@ def register_signal(filename) :
                          time_series[0,k-1]=column
                  x=np.vstack((x,time_series))
     return(x)
-             
+
+
              
 def generate_multi(n, length_seconds, sampling_rate, frequencies_array, add_noise=0):
 

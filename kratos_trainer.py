@@ -1,3 +1,4 @@
+import sys
 import torch
 import torch.nn as nn
 import time
@@ -8,9 +9,9 @@ from model import *
 import os
 
 def main(name,identifiant,device='cpu'):
-
-    nlimit=3
-
+    
+    nlimit=1
+    
     if not (device=='cpu') : #working on the server- else the files have alrd been copied in my wd
         os.chdir('/data1/infantes/kratos/d2/nbeats_f100')
         filename='./train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
@@ -23,8 +24,14 @@ def main(name,identifiant,device='cpu'):
     train_set=gs.register_signal(filename).transpose() #[time_step]x[dim] > [dim]x[time_step]
     test_set=gs.register_signal(filename_).transpose()
 
-    print('train_set.shape :', train_set.shape)
-    print('test_set.shape :', test_set.shape)
+    train_set=train_set[:nlimit,:]
+    test_set=test_set[:nlimit,:]
+
+    print(train_set)
+    print(test_set)
+
+    
+   
     path='./data/{}'.format(name)
 
     if not os.path.exists(path) :
@@ -36,15 +43,15 @@ def main(name,identifiant,device='cpu'):
     
     xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set,device=device)
     print('we got the data : xtrain.shape :', xtrain.shape)
-
+    
     #Initiate an instance :
     ninp=xtrain.shape[-1]
     nhid=256
-    nlayers=2
+    nlayers=1
     nMLP=128
-    nhead=4
+    nhead=2
     dropout=0.1
-    epochs=1000
+    epochs=50
     bsz=256
     eval_bsz=256
    
@@ -52,7 +59,8 @@ def main(name,identifiant,device='cpu'):
     
     print("Model structure: ", model, "\n\n")
     for layer_name, param in model.named_parameters():
-        print(f"Layer: {layer_name} | Size: {param.size()} | Values : {param[:2]} \n")
+        print(f"Layer: {layer_name} | Size: {param.size()} \n")
+
 
     model.fit(xtrain, ytrain, xtest, ytest, bsz, eval_bsz, epochs, name)
     test_loss = model.evaluate(xtest, ytest, eval_bsz, True, name, predict=True)

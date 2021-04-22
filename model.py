@@ -33,12 +33,11 @@ class TransformerModel(nn.Module):
 
         self.parameters = []
         self.parameters = nn.ParameterList(self.parameters)
-
-
-        self.optimizer=torch.optim.Adam(self.parameters(),lr=1e-5,betas=(0.9,0.98))
+        
+        self.optimizer=torch.optim.Adam(self.parameters(),lr=1e-2,betas=(0.9,0.98))
 #        self.optimizer = torch.optim.SGD(self.parameters(), lr=0.1, momentum=0.9)
 #        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min')
-        self._loss=F.l1_loss
+        self._loss=F.mse_loss
 
         self.to(self.device)
         
@@ -51,7 +50,7 @@ class TransformerModel(nn.Module):
        # print('------- input :', input.shape)
         if self.pos_encod :
             if verbose :
-                input=self.pos_encoder(input, verbose=True)
+                input=self.pos_encoder(input)
             else :
                 input=self.pos_encoder(input)
 
@@ -92,10 +91,10 @@ class TransformerModel(nn.Module):
            
             self.optimizer.zero_grad()
             output = self(data, verbose=verbose)
-            
-            loss=self._loss(output, targets)
 
             
+            loss=self._loss(output.transpose(0,1).reshape(-1), targets.transpose(0,1).reshape(-1))
+                        
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
             self.optimizer.step()
@@ -187,7 +186,7 @@ class TransformerModel(nn.Module):
             epoch_start_time = time.time()
             xtrain_list=split(xtrain, bsz)
             ytrain_list=split(ytrain, bsz)
-            
+
             self.do_training(xtrain_list,ytrain_list,verbose)
            
             val_loss = self.evaluate(xtest, ytest, eval_bsz, True, filename, predict=False, verbose=verbose)
@@ -195,7 +194,9 @@ class TransformerModel(nn.Module):
            # self.scheduler(train_loss)
             store_loss[epoch-1]=train_loss
             store_val_loss[epoch-1]=val_loss
-            
+            # for layer_name, param in self.named_parameters():
+            #     print(f"Layer: {layer_name} | Values : {param[:2]} \n")
+
        
         np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
         np.savetxt('./data/{}/val_loss.txt'.format(filename), store_val_loss)
@@ -227,28 +228,20 @@ class PositionalEncoding(nn.Module):
 
 
 class MLP(nn.Module):
-    def __init__(self, input_size, output_size, nhidden=1, dim_hidd=128, device='cpu'):
+    def __init__(self, input_size, output_size, device='cpu'):
         super(MLP, self).__init__()
-        self.input_size=input_size
-        self.output_size=output_size
-        self.fc_layers=[]
-        self.fc_layers.append(nn.Linear(self.input_size, dim_hidd).to(device))
-        for k in range(nhidden):
-            self.fc_layers.append(nn.Linear(dim_hidd, dim_hidd).to(device))
-        self.fc_layers.append(nn.Linear(dim_hidd, self.output_size).to(device))
+        self.layers=nn.Linear(input_size, output_size)
         self.device=device
         self.to(device)
         
     def forward(self,x):
         output=x
-        for f in self.fc_layers :
-            output=f(output)
-        return(output) 
+        return(self.layers(output)) 
 
 class MLForecast(nn.Module) :
-    def __init__(self, forecast_size, backast_size, nhidden=1, dim_hidd=128, device='cpu') :
+    def __init__(self, forecast_size, backast_size, device='cpu') :
         super(MLForecast, self).__init__()
-        self.MLP=MLP(backast_size, forecast_size, nhidden, dim_hidd, device)
+        self.MLP=MLP(backast_size, forecast_size, device)
         self.to(device)
 
     def forward(self, x):
@@ -257,10 +250,10 @@ class MLForecast(nn.Module) :
         return(output)
 
 class Decoder(nn.Module) :
-    def __init__(self, ninp, nout, forecast_size, backast_size, nMLP=1, nMLF=1, dim_MLP=128, dim_MLF=128, device='cpu') :
+    def __init__(self, ninp, nout, forecast_size, backast_size, device='cpu') :
        super(Decoder, self).__init__()
-       self.MLP=MLP(ninp, nout, nMLP, dim_MLP, device)
-       self.MLF=MLP(backast_size,forecast_size, nMLF, dim_MLF, device)
+       self.MLP=MLP(ninp, nout, device)
+       self.MLF=MLP(backast_size,forecast_size, device)
        self.to(device)
 
     def forward(self,x,verbose=False):
