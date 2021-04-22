@@ -4,7 +4,7 @@ import torch.nn as nn
 import time
 import argparse
 import generate_signal as gs
-from load_data import get_data2
+from load_data import get_data2, normalize_data
 from model import *
 import os
 
@@ -24,8 +24,8 @@ def main(name,identifiant,device='cpu'):
     train_set=gs.register_signal(filename).transpose() #[time_step]x[dim] > [dim]x[time_step]
     test_set=gs.register_signal(filename_).transpose()
 
-    train_set=train_set[:nlimit,:]
-    test_set=test_set[:nlimit,:]
+    train_set=normalize_data(train_set[:nlimit,:])
+    test_set=normalize_data(test_set[:nlimit,:])
 
     print(train_set)
     print(test_set)

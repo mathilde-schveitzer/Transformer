@@ -108,3 +108,12 @@ def batchify(x,y,bsz,i,dim) :
     return data, target
     
     
+def normalize_data(x):
+    "value will be btwm 0 and 1"
+    min=np.amin(x)
+    max=np.amax(x)
+
+    x1=(x-min)/(max-min)
+    x2=(x-max)/(max-min)
+
+    return(0.5*(x1+x2))
