@@ -1,3 +1,4 @@
+import sys
 import os
 import numpy as np
 import math
@@ -10,31 +11,44 @@ import load_data as ld
 
 class TransformerModel(nn.Module):
 
-    def __init__(self, ninp, nhead, nhid, nlayers, nMLP, backast_size, forecast_size, pos_encod=False, learning_rate=1e-5, dropout=0.5, device=torch.device('cpu')):
+    def __init__(self, ninp, nhead, nhid, nlayers, nMLP, backast_size, forecast_size, pos_encod=False, dropout=0.5, device=torch.device('cpu')):
         super(TransformerModel, self).__init__()
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
         self.model_type = 'Transformer'
         self.embed_dims=ninp*nhead
         self.device = device
         encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout, activation='gelu')
-        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         self.encoder=MLP(ninp, self.embed_dims, device=device)
+        self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)       
         self.pos_encod=pos_encod
         if pos_encod :
             self.pos_encoder=PositionalEncoding(self.embed_dims,dropout)
         self.decoder=Decoder(self.embed_dims, ninp, forecast_size,backast_size,device=device)
-        self.to(self.device)
+
+        # self.parameters.extend(self.encoder.parameters())
+        # self.parameters.extend(self.transformer_encoder.parameters())
+        # self.parameters.extend(self.decoder.parameters())
+
+        
+
         self.parameters = []
         self.parameters = nn.ParameterList(self.parameters)
-        self.optimizer=torch.optim.Adam(lr=1e-2, params=self.parameters())
+
+
+        self.optimizer=torch.optim.Adam(self.parameters(),lr=1e-5,betas=(0.9,0.98))
+#        self.optimizer = torch.optim.SGD(self.parameters(), lr=0.1, momentum=0.9)
+#        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min')
         self._loss=F.l1_loss
+
+        self.to(self.device)
+        
         print('|T R A N S F O R M E R : Optimus Prime is ready |')
 
     def forward(self, input, verbose=False):
         if verbose :
             print('----- this is forward -------')
         input = self.encoder(input).to(self.device)
-        print('------- input :', input.shape)
+       # print('------- input :', input.shape)
         if self.pos_encod :
             if verbose :
                 input=self.pos_encoder(input, verbose=True)
@@ -66,7 +80,7 @@ class TransformerModel(nn.Module):
         shuffled_indices=list(range(len(xtrain)))
         random.shuffle(shuffled_indices)
         
-        for batch_id in shuffled_indices:
+        for k,batch_id in enumerate(shuffled_indices):
            
             data, targets = xtrain[batch_id], ytrain[batch_id]
             data=data.transpose(0,1).to(self.device)
@@ -78,21 +92,24 @@ class TransformerModel(nn.Module):
            
             self.optimizer.zero_grad()
             output = self(data, verbose=verbose)
+            
             loss=self._loss(output, targets)
-         
+
+            
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
             self.optimizer.step()
 
             total_loss += loss.item()
+            print('----------- total loss :', total_loss)
             log_interval = 1
-            if batch_id % log_interval == 0 :
+            if k % log_interval == 0 : # donc tous les "log_interval" batchs
                 cur_loss = total_loss / log_interval
                 elapsed = time.time() - start_time
                 print(' {:5d}/{:5d} batches | ms/batch {:5.2f} | ''loss {:5.2f}' .format(batch_id, len(xtrain),elapsed * 1000 / log_interval,cur_loss))
         
                 start_time = time.time()
-            total_loss=0
+                total_loss=0
 
     def evaluate(self,xtest, ytest, bsz, val, name, predict=False, verbose=False):  
         self.eval() # Turn on the evaluation mode (herited from module)
@@ -175,6 +192,7 @@ class TransformerModel(nn.Module):
            
             val_loss = self.evaluate(xtest, ytest, eval_bsz, True, filename, predict=False, verbose=verbose)
             train_loss = self.evaluate(xtrain, ytrain, bsz, False, filename, predict=False,verbose=verbose)
+           # self.scheduler(train_loss)
             store_loss[epoch-1]=train_loss
             store_val_loss[epoch-1]=val_loss
             

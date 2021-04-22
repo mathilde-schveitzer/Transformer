@@ -31,7 +31,6 @@ def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='
     for i in range(nb) : #on selectionne de facon aleatoire nb "bouts de signaux"
         j=np.random.randint(backast_length, ntrain - forecast_length)
         k=np.random.randint(backast_length, ntest - forecast_length)
-        print('------------------ j et k :', j,k)
         time_series_cleaned_fortraining_x=train_set[:,j- backast_length:j].reshape(1,backast_length,dim)
         time_series_cleaned_fortraining_y=train_set[:,j:j+forecast_length].reshape(1,forecast_length, dim)
         time_series_cleaned_fortesting_x=test_set[:,k-backast_length:k].reshape(1,backast_length, dim)
@@ -43,10 +42,10 @@ def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='
         xtest = np.vstack((xtest, time_series_cleaned_fortesting_x))
         ytest = np.vstack((ytest, time_series_cleaned_fortraining_y))
 
-        print('xtrainshape : ', xtrain.shape)
-        print('ytrainshape : ', ytrain.shape)
-        print('ytestshape : ', ytest.shape)
-        print('xtestshape : ', xtest.shape)
+        # print('xtrainshape : ', xtrain.shape)
+        # print('ytrainshape : ', ytrain.shape)
+        # print('ytestshape : ', ytest.shape)
+        # print('xtestshape : ', xtest.shape)
 
     xtrain=torch.tensor(xtrain,dtype=torch.float32).to(device)
     ytrain=torch.tensor(ytrain,dtype=torch.float32).to(device)
@@ -73,8 +72,6 @@ def batchify(x,y,bsz,i,dim) :
     for k in range(i,i+bsz) :
         data=torch.stack(data, get_xi(x,dim,k))
         target=torch.stack(target, get_yi(y,dim,k))
-    print(data.shape)
-    print(target.shape)
     return data, target
     
     

@@ -9,10 +9,12 @@ import os
 
 def main(name,identifiant,device='cpu'):
 
+    nlimit=3
+
     if not (device=='cpu') : #working on the server- else the files have alrd been copied in my wd
         os.chdir('/data1/infantes/kratos/d2/nbeats_f100')
         filename='./train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
-        filename_='/test/SAT2_10_minutes_future100_4.csv'
+        filename_='./test/SAT2_10_minutes_future100_4.csv'
     # we use the data store in the file
     else :
         filename='nbeats_f100/train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
@@ -21,6 +23,8 @@ def main(name,identifiant,device='cpu'):
     train_set=gs.register_signal(filename).transpose() #[time_step]x[dim] > [dim]x[time_step]
     test_set=gs.register_signal(filename_).transpose()
 
+    print('train_set.shape :', train_set.shape)
+    print('test_set.shape :', test_set.shape)
     path='./data/{}'.format(name)
 
     if not os.path.exists(path) :
@@ -28,23 +32,28 @@ def main(name,identifiant,device='cpu'):
 
     backast_length=10
     forecast_length=4 #chemin de la facilite
-    nb=500
+    nb=5500
     
-    xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set, device=device)
+    xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set,device=device)
     print('we got the data : xtrain.shape :', xtrain.shape)
 
     #Initiate an instance :
     ninp=xtrain.shape[-1]
     nhid=256
-    nlayers=1
+    nlayers=2
     nMLP=128
-    nhead=12
+    nhead=4
     dropout=0.1
-    epochs=10
-    bsz=128
-    eval_bsz=128
+    epochs=1000
+    bsz=256
+    eval_bsz=256
    
     model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length, pos_encod=True, dropout=dropout, device=device)
+    
+    print("Model structure: ", model, "\n\n")
+    for layer_name, param in model.named_parameters():
+        print(f"Layer: {layer_name} | Size: {param.size()} | Values : {param[:2]} \n")
+
     model.fit(xtrain, ytrain, xtest, ytest, bsz, eval_bsz, epochs, name)
     test_loss = model.evaluate(xtest, ytest, eval_bsz, True, name, predict=True)
     train_loss = model.evaluate(xtrain, ytrain, bsz, False, name, predict=True)

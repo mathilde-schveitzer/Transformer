@@ -119,7 +119,7 @@ def register_signal(filename) :
              else :
                  time_series=np.zeros((1,length-1))
                  for k,column in enumerate(row) :
-                     if not(k==0): #switch first colomn (time step)
+                     if not(k==0) : #switch first colomn (time step)
                          time_series[0,k-1]=column
                  x=np.vstack((x,time_series))
     return(x)
