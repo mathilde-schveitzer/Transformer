@@ -30,15 +30,14 @@ def main(name,identifiant,device='cpu'):
     print(train_set)
     print(test_set)
 
-    
-   
+       
     path='./data/{}'.format(name)
 
     if not os.path.exists(path) :
         os.makedirs(path)    
 
-    backast_length=10
-    forecast_length=4 #chemin de la facilite
+    backast_length=100
+    forecast_length=40 #chemin de la facilite
     nb=5500
     
     xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set,device=device)
@@ -47,11 +46,11 @@ def main(name,identifiant,device='cpu'):
     #Initiate an instance :
     ninp=xtrain.shape[-1]
     nhid=256
-    nlayers=1
+    nlayers=2
     nMLP=128
     nhead=2
-    dropout=0.1
-    epochs=50
+    dropout=0.2
+    epochs=150
     bsz=256
     eval_bsz=256
    

@@ -25,19 +25,12 @@ class TransformerModel(nn.Module):
             self.pos_encoder=PositionalEncoding(self.embed_dims,dropout)
         self.decoder=Decoder(self.embed_dims, ninp, forecast_size,backast_size,device=device)
 
-        # self.parameters.extend(self.encoder.parameters())
-        # self.parameters.extend(self.transformer_encoder.parameters())
-        # self.parameters.extend(self.decoder.parameters())
-
-        
 
         self.parameters = []
         self.parameters = nn.ParameterList(self.parameters)
         
-        self.optimizer=torch.optim.Adam(self.parameters(),lr=1e-2,betas=(0.9,0.98))
-#        self.optimizer = torch.optim.SGD(self.parameters(), lr=0.1, momentum=0.9)
-#        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min')
-        self._loss=F.mse_loss
+        self.optimizer=torch.optim.Adam(self.parameters(),lr=1e-3,betas=(0.9,0.98))
+        self._loss=F.l1_loss
 
         self.to(self.device)
         
@@ -47,7 +40,6 @@ class TransformerModel(nn.Module):
         if verbose :
             print('----- this is forward -------')
         input = self.encoder(input).to(self.device)
-       # print('------- input :', input.shape)
         if self.pos_encod :
             if verbose :
                 input=self.pos_encoder(input)
@@ -137,19 +129,19 @@ class TransformerModel(nn.Module):
             prediction=torch.empty_like(ytest)
             print('prediction.shape', prediction.shape)
         test_loss = []
+        
         for batch_id in range(0, len(xtest_list)):
        
-            data,targets=xtest_list[batch_id],ytest_list[batch_id]
-            data=data.transpose(0,1).to(self.device)
-            targets=targets.transpose(0,1).to(self.device)
+            data,targets=xtest_list[batch_id].to(self.device),ytest_list[batch_id].to(self.device)
+            data=data.transpose(0,1)
             output=self(data)
-            loss=self._loss(output,targets.to(self.device)).item()
+            loss=self._loss(output,targets.transpose(0,1)).item()
             test_loss.append(loss)
 
             if predict :
                 #d'ou l'importance de passer les batch dans l'ordre
                 print('targets.shape',targets.shape)
-                prediction[batch_id:batch_id+targets.shape[1],:,:]=targets.transpose(0,1)                 
+                prediction[batch_id:batch_id+targets.shape[0],:,:]=targets                 
         mean_loss=np.mean(test_loss)
 
         if val :
@@ -158,8 +150,12 @@ class TransformerModel(nn.Module):
             print(f'Training loss : {mean_loss :.4f}')
             
         if predict :
-            torch.save(prediction,'./data/{}/predictions.pt'.format(name))
-
+            if val :
+                print('-------we save test values----------')
+                torch.save(prediction,'./data/{}/predictions_test.pt'.format(name))
+            else :
+                print('-------we save train values ------')
+                torch.save(prediction, './data/{}/predictions_train.pt'.format(name))
         return(mean_loss)
 
 
