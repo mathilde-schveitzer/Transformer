@@ -75,7 +75,8 @@ class TransformerModel(nn.Module):
            
             data, targets = xtrain[batch_id], ytrain[batch_id]
             data=data.transpose(0,1).to(self.device)
-            targets=targets.transpose(0,1).to(self.device)
+            targets=targets.to(self.device)
+          
 
             if verbose :
                 print('--------data :', data.shape)
@@ -84,17 +85,23 @@ class TransformerModel(nn.Module):
             self.optimizer.zero_grad()
             output = self(data, verbose=verbose)
 
+            print(output.shape)
+            print(targets.shape)
+            print(data.shape)
+
             
-            loss=self._loss(output.transpose(0,1).reshape(-1), targets.transpose(0,1).reshape(-1))
+            loss=self._loss(output.transpose(0,1).reshape(-1), targets.reshape(-1))
                         
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
             self.optimizer.step()
 
             total_loss += loss.item()
-            print('----------- total loss :', total_loss)
+            print('----------- total loss :', loss.item())
             log_interval = 1
-            if k % log_interval == 0 : # donc tous les "log_interval" batchs
+            if k % log_interval == 50 : # donc tous les "log_interval" batchs
+                print(targets)
+                print(output)
                 cur_loss = total_loss / log_interval
                 elapsed = time.time() - start_time
                 print(' {:5d}/{:5d} batches | ms/batch {:5.2f} | ''loss {:5.2f}' .format(batch_id, len(xtrain),elapsed * 1000 / log_interval,cur_loss))
@@ -126,7 +133,7 @@ class TransformerModel(nn.Module):
                print('---PAVAL---')
        
         if predict :
-            prediction=torch.empty_like(ytest)
+            prediction=torch.zeros_like(ytest)
             print('prediction.shape', prediction.shape)
         test_loss = []
         
@@ -135,13 +142,15 @@ class TransformerModel(nn.Module):
             data,targets=xtest_list[batch_id].to(self.device),ytest_list[batch_id].to(self.device)
             data=data.transpose(0,1)
             output=self(data)
-            loss=self._loss(output,targets.transpose(0,1)).item()
+            loss=self._loss(output.transpose(0,1).reshape(-1),targets.reshape(-1)).item()
             test_loss.append(loss)
 
             if predict :
                 #d'ou l'importance de passer les batch dans l'ordre
                 print('targets.shape',targets.shape)
-                prediction[batch_id:batch_id+targets.shape[0],:,:]=targets                 
+                print(output.shape)
+                prediction[batch_id:batch_id+output.shape[1],:,:]=output.transpose(0,1)
+                print(prediction)
         mean_loss=np.mean(test_loss)
 
         if val :

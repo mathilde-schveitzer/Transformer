@@ -11,16 +11,10 @@ import os
 def main(name,identifiant,device='cpu'):
     
     nlimit=1
-    
-    if not (device=='cpu') : #working on the server- else the files have alrd been copied in my wd
-        os.chdir('/data1/infantes/kratos/d2/nbeats_f100')
-        filename='./train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
-        filename_='./test/SAT2_10_minutes_future100_4.csv'
-    # we use the data store in the file
-    else :
-        filename='nbeats_f100/train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
-        filename_='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'
 
+    filename='nbeats_f100/train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
+    filename_='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'
+   
     train_set=gs.register_signal(filename).transpose() #[time_step]x[dim] > [dim]x[time_step]
     test_set=gs.register_signal(filename_).transpose()
 
@@ -50,7 +44,7 @@ def main(name,identifiant,device='cpu'):
     nMLP=128
     nhead=2
     dropout=0.2
-    epochs=150
+    epochs=500
     bsz=256
     eval_bsz=256
    

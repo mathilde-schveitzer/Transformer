@@ -90,23 +90,7 @@ def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='
     print('ytestshape : ', ytest.shape)
     print('xtestshape : ', xtest.shape)
                                 
-    return xtrain, ytrain, xtest, ytest
-
-def get_xi(xtrain,dim,i):
-    "return the x multidimensionnal vector numero i"
-    return(xtrain[i*dim:i*(dim+1),:])
-
-def get_yi(ytrain,dim,i):
-    return(ytrain[i*dim:i*(dim+1),:])
-
-def batchify(x,y,bsz,i,dim) :
-    data=torch.tensor([]).reshape(x.shape(1))
-    target=torch.tensor([]).reshape(y.shape(1))
-    for k in range(i,i+bsz) :
-        data=torch.stack(data, get_xi(x,dim,k))
-        target=torch.stack(target, get_yi(y,dim,k))
-    return data, target
-    
+    return xtrain, ytrain, xtest, ytest    
     
 def normalize_data(x):
     "value will be btwm 0 and 1"
@@ -117,3 +101,11 @@ def normalize_data(x):
     x2=(x-max)/(max-min)
 
     return(0.5*(x1+x2))
+
+def merge_data(a,b):
+    "return an array which is a concatenate version of a's lines and b's line"
+    c=np.zeros(a.shape[0]*(a.shape[1]+b.shape[1]))
+    for k in range(a.shape[0]):
+        c[k*(a.shape[1]+b.shape[1]):(k+1)*a.shape[1]+k*b.shape[1]]=a[k,:]
+        c[(k+1)*(a.shape[1])+k*b.shape[1]:(k+1)*(a.shape[1]+b.shape[1])]=b[k,:]
+    return(c)
