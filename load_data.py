@@ -2,65 +2,110 @@ import csv
 import numpy as np
 import torch
 
-def get_data(filename, batch_size=200, eval_batch_size=100, device='cpu'):
-    """
-    Create the set of datas that will be used to train the neural networks, from the file filename
+def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='cpu') :
+
     
-    Args :
-         - filename : string
-               Name of the file that contains the signal, must be a .csv
-         - copy : int
-               After getting the signal, the algo copies it copy times in a numpy array. Each copy corresponds to a sample(x,y)
-"""
-    #clean time_series :
-    def clean_time_series(filename):
-        x_tl = []
-        name='./data/{}/signal.csv'.format(filename)
-        with open(name, "r") as file:
-            reader = csv.reader(file, delimiter=',')
-            for line in reader:
-                x_tl.append(line)
-        x_tl=x_tl[0] #petite astuce : x_tl est en faite une ligne dans une ligne
-        time_series = [float(s) for s in x_tl if s != '']
-        print('---------- time_series len = {} ------------'.format(len(time_series)))
-        return(time_series)
+    if len(train_set.shape)>1 :
+        assert train_set.shape[0]==test_set.shape[0], 'train and test sets should have same dimension'
+        dim=train_set.shape[0]
+        ntrain=train_set.shape[1]
+        ntest=test_set.shape[1]
 
-    cleaned_time_series=clean_time_series(filename)
-    n=len(cleaned_time_series)
-    ntest=int(0.75*n)
-    nvalid=n # no validation test for now
-
-    xtrain=torch.tensor(np.array(cleaned_time_series[:ntest]), dtype=torch.float32).to(device)
-    xtest=torch.tensor(np.array(cleaned_time_series[ntest:nvalid]),dtype=torch.float32).to(device)
-    xval=torch.tensor(np.array(cleaned_time_series[nvalid:]),dtype=torch.float32).to(device)
+        xtrain = np.empty((0, backast_length, dim))
+        ytrain = np.empty((0, forecast_length, dim))
     
-    # at this stage : 1 line of size npts
+        xtest = np.empty((0, backast_length, dim))
+        ytest = np.empty((0, forecast_length, dim))
 
-    def batchify(data, bsz):
-        # Divide the dataset into bsz parts.
-        nbatch = data.size(0) // bsz
-        # Trim off any extra elements that wouldn't cleanly fit (remainders).
-        data = data.narrow(0, 0, nbatch * bsz) 
-        # Evenly divide the data across the bsz batches.
-        data = data.view(bsz, -1).t().contiguous()
-        return data
 
-    train_data=batchify(xtrain, batch_size)
-    val_data= batchify(xval, eval_batch_size)
-    test_data = batchify(xtest, eval_batch_size)
-    # train_data.shape --> nb_batch, batch_size
-    
-    return(train_data,test_data,val_data)
+        time_series_cleaned_fortraining_x=np.zeros((1, backast_length, dim))
+        time_series_cleaned_fortraining_y=np.zeros((1, forecast_length, dim))
 
-def get_batch(source,i,bptt,printer=False):
-    seq_len=min(bptt, len(source)-(i+1))
-    data=source[i:i+seq_len]
-    data=torch.reshape(data,(seq_len,source.size(1),1))
-    target=source[i+1:i+1+seq_len].reshape(-1) # on perd une dimension
+        time_series_cleaned_fortesting_x=np.zeros((1, backast_length, dim))
+        time_series_cleaned_fortesting_y=np.zeros((1, forecast_length, dim))
+
+        for i in range(nb) : #on selectionne de facon aleatoire nb "bouts de signaux"
+            j=np.random.randint(backast_length, ntrain - forecast_length)
+            k=np.random.randint(backast_length, ntest - forecast_length)
+            time_series_cleaned_fortraining_x=train_set[:,j- backast_length:j].reshape(1,backast_length,dim)
+            time_series_cleaned_fortraining_y=train_set[:,j:j+forecast_length].reshape(1,forecast_length, dim)
+            time_series_cleaned_fortesting_x=test_set[:,k-backast_length:k].reshape(1,backast_length, dim)
+            time_series_cleaned_fortesting_y=test_set[:,k:k+forecast_length].reshape(1,forecast_length,dim)
+
+            xtrain = np.vstack((xtrain, time_series_cleaned_fortraining_x))
+            ytrain = np.vstack((ytrain, time_series_cleaned_fortraining_y))
         
-    return data, target # en sortie on a bptt donnees, de longueurs batch_size
+            xtest = np.vstack((xtest, time_series_cleaned_fortesting_x))
+            ytest = np.vstack((ytest, time_series_cleaned_fortraining_y))
 
-def squeeze_last_dim(tensor): # apply before reshape
-    if len(tensor.shape)==3 and tensor.shape[-1]==1 :
-        return tensor[..., 0]
-    return tensor
+        # print('xtrainshape : ', xtrain.shape)
+        # print('ytrainshape : ', ytrain.shape)
+        # print('ytestshape : ', ytest.shape)
+        # print('xtestshape : ', xtest.shape)
+
+    else :
+        ntrain=train_set.shape[0]
+        ntest=test_set.shape[0]
+        xtrain = np.empty((0, backast_length))
+        ytrain = np.empty((0, forecast_length))
+    
+        xtest = np.empty((0, backast_length))
+        ytest = np.empty((0, forecast_length))
+
+
+        time_series_cleaned_fortraining_x=np.zeros((1, backast_length))
+        time_series_cleaned_fortraining_y=np.zeros((1, forecast_length))
+
+        time_series_cleaned_fortesting_x=np.zeros((1, backast_length))
+        time_series_cleaned_fortesting_y=np.zeros((1, forecast_length))
+
+        for i in range(nb) : #on selectionne de facon aleatoire nb "bouts de signaux"
+            j=np.random.randint(backast_length, ntrain - forecast_length)
+            k=np.random.randint(backast_length, ntest - forecast_length)
+            time_series_cleaned_fortraining_x=train_set[j- backast_length:j]
+            time_series_cleaned_fortraining_y=train_set[j:j+forecast_length]
+            time_series_cleaned_fortesting_x=test_set[k-backast_length:k]
+            time_series_cleaned_fortesting_y=test_set[k:k+forecast_length]
+
+            xtrain = np.vstack((xtrain, time_series_cleaned_fortraining_x))
+            ytrain = np.vstack((ytrain, time_series_cleaned_fortraining_y))
+        
+            xtest = np.vstack((xtest, time_series_cleaned_fortesting_x))
+            ytest = np.vstack((ytest, time_series_cleaned_fortraining_y))
+
+            print('xtrainshape : ', xtrain.shape)
+            print('ytrainshape : ', ytrain.shape)
+            print('ytestshape : ', ytest.shape)
+            print('xtestshape : ', xtest.shape)
+
+        
+
+    xtrain=torch.tensor(xtrain,dtype=torch.float32).to(device)
+    ytrain=torch.tensor(ytrain,dtype=torch.float32).to(device)
+    xtest=torch.tensor(xtest,dtype=torch.float32).to(device)
+    ytest=torch.tensor(ytest, dtype=torch.float32).to(device)
+
+    print('xtrainshape : ', xtrain.shape)
+    print('ytrainshape : ', ytrain.shape)
+    print('ytestshape : ', ytest.shape)
+    print('xtestshape : ', xtest.shape)
+                                
+    return xtrain, ytrain, xtest, ytest    
+    
+def normalize_data(x):
+    "value will be btwm 0 and 1"
+    min=np.amin(x)
+    max=np.amax(x)
+
+    x1=(x-min)/(max-min)
+    x2=(x-max)/(max-min)
+
+    return(0.5*(x1+x2))
+
+def merge_data(a,b):
+    "return an array which is a concatenate version of a's lines and b's line"
+    c=np.zeros(a.shape[0]*(a.shape[1]+b.shape[1]))
+    for k in range(a.shape[0]):
+        c[k*(a.shape[1]+b.shape[1]):(k+1)*a.shape[1]+k*b.shape[1]]=a[k,:]
+        c[(k+1)*(a.shape[1])+k*b.shape[1]:(k+1)*(a.shape[1]+b.shape[1])]=b[k,:]
+    return(c)

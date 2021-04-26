@@ -1,3 +1,4 @@
+import os
 import csv
 import numpy as np
 import random as rd
@@ -65,11 +66,7 @@ def generate_signal(length_seconds, sampling_rate, frequencies_list, func=[], tr
                 signal = signal + np.cos(2*np.pi*frequencies_list[k]*time)
             else:
                 signal = signal + np.sin(2*np.pi*frequencies_list[k]*time)
-    
-   # for t in range(len(signal)) :       
-   #     amplitude = np.random.uniform(low=0, high=10, size=(len(trend),))
-   #     signal[t]=sum(amplitude[k]*trend[k]*signal[t]**k for k in range(len(trend)))
-               
+                   
     if add_noise:
         print(signal.shape)
         noise = np.random.uniform(low=0, high=add_noise, size=(npnts,))
@@ -112,22 +109,51 @@ def perturbation(signal,time,length_seconds):
     
     return(perturbation)
     
-def register_signal(signal,identifiant) :
-    '''Stores the signal in a csv file
-    Args :
-        - signal : an array which cointains signal(s) values (eventually multidimensionnel)
-        - time : an array which contains the time values that match with signal
-        - identifiant : will be the name of your csv file'''
-    name='{}.csv'.format(identifiant)
-    with open(name, "w", newline='') as csvfile :
-        writer=csv.writer(csvfile, delimiter=',')
-        if np.size(signal.shape)>1 : #signal eventuellement multidimensionnel
-            i=signal.shape[1] #it
-            for k in range(i):
-                writer.writerow(signal) # generalisation par boucles iteratives
-        else :
-            writer.writerow(signal)
+def register_signal(filename) :
+    with open(filename, newline='') as csvfile :
+         reader=csv.reader(csvfile, delimiter=',')
+         for n,row in enumerate(reader) :
+             if n==0 :
+                 length=len(row)
+                 x=np.empty((1,length-1))
+             else :
+                 time_series=np.zeros((1,length-1))
+                 for k,column in enumerate(row) :
+                     if not(k==0) : #switch first colomn (time step)
+                         time_series[0,k-1]=column
+                 x=np.vstack((x,time_series))
+    return(x)
 
+
+             
+def generate_multi(n, length_seconds, sampling_rate, frequencies_array, add_noise=0):
+
+    assert n==frequencies_array.shape[0], "the number of freq provided does not match the number of signal you specify"
+
+    storage=np.zeros((3*n,length_seconds*sampling_rate))
+    time=np.arange(0,length_seconds*sampling_rate)/sampling_rate
+    
+    for k in range(n):
+        signal,_,_=generate_signal(length_seconds, sampling_rate, list(frequencies_array[k]), add_noise=add_noise)
+        storage[k,:]=signal
+        storage[k+1,:]=signal*np.sin(time)
+        storage[k+2,:]=signal*np.cos(time)
+
+    indice=np.arange(3*n)
+    rd.shuffle(indice)
+
+    toregister=np.zeros(storage.shape)
+    for k,i in enumerate(indice) :
+        toregister[i,:]=storage[k,:]
+
+    return(toregister)
+
+def load_signal(filename):
+    filename='./data/{}/signal.txt'.format(filename)
+    time_series=np.loadtxt(filename)
+    return(time_series)
+
+            
 def main():
     freq=[0.5,5,10,100]
     length_seconds=100
