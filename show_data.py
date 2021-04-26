@@ -37,16 +37,19 @@ def main(signal, datatype):
         plt.plot(numpy_val_, label='Erreur sur le validation test - without pos encoding')
 
     if datatype=='prediction':
-        predict_path='./data/{}/predictions_train.pt'.format(signal)
+        predict_path='./data/{}/predictions_test.pt'.format(signal)
         xtrain_path='./data/{}/xtrain.pt'.format(signal)
         ytrain_path='./data/{}/ytrain.pt'.format(signal)
         
         
-        prediction=torch.load(predict_path) # [nb]x[forecast_size]x[dim]
-        data=torch.load(xtrain_path)
-        target=torch.load(ytrain_path)
+        prediction=torch.load(predict_path,map_location=torch.device('cpu')) # [nb]x[forecast_size]x[dim]
+        data=torch.load(xtrain_path, map_location=torch.device('cpu'))
+        target=torch.load(ytrain_path, map_location=torch.device('cpu'))
 
-        prediction=prediction[:,:,0].numpy()
+        print(prediction.shape)
+        print(data.shape)
+        sys.exit
+        prediction=prediction[:,:,0].detach().numpy()
         data=data[:,:,0].numpy()
         target=target[:,:,0].numpy()
 
