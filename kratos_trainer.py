@@ -31,7 +31,7 @@ def main(name,identifiant,device='cpu'):
         os.makedirs(path)    
 
     backast_length=100
-    forecast_length=40 #chemin de la facilite
+    forecast_length=100 #chemin de la facilite
     nb=5500
     
     xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set,device=device)

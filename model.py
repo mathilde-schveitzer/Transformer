@@ -90,7 +90,7 @@ class TransformerModel(nn.Module):
             print(data.shape)
 
             
-            loss=self._loss(output.transpose(0,1).reshape(-1), targets.reshape(-1))
+            loss=self._loss(output.reshape(-1), targets.transpose(0,1).reshape(-1))
                         
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
@@ -142,14 +142,15 @@ class TransformerModel(nn.Module):
             data,targets=xtest_list[batch_id].to(self.device),ytest_list[batch_id].to(self.device)
             data=data.transpose(0,1)
             output=self(data)
-            loss=self._loss(output.transpose(0,1).reshape(-1),targets.reshape(-1)).item()
+            loss=self._loss(output.reshape(-1),targets.transpose(0,1).reshape(-1)).item()
             test_loss.append(loss)
 
             if predict :
                 #d'ou l'importance de passer les batch dans l'ordre
                 print('targets.shape',targets.shape)
                 print(output.shape)
-                prediction[batch_id:batch_id+output.shape[1],:,:]=output.transpose(0,1)
+                output=output.transpose(0,1)
+                prediction[batch_id*output.shape[0]:(batch_id+1)*output.shape[0],:,:]=output
                 print(prediction)
         mean_loss=np.mean(test_loss)
 
