@@ -15,7 +15,7 @@ def get_data(filename, batch_size=200, eval_batch_size=100, device='cpu'):
     #clean time_series :
     def clean_time_series(filename):
         x_tl = []
-        name='./data/{}.csv'.format(filename)
+        name='./data/{}/signal.csv'.format(filename)
         with open(name, "r") as file:
             reader = csv.reader(file, delimiter=',')
             for line in reader:
@@ -28,7 +28,7 @@ def get_data(filename, batch_size=200, eval_batch_size=100, device='cpu'):
     cleaned_time_series=clean_time_series(filename)
     n=len(cleaned_time_series)
     ntest=int(0.75*n)
-    nvalid=int(0.875*n)
+    nvalid=n # no validation test for now
 
     xtrain=torch.tensor(np.array(cleaned_time_series[:ntest]), dtype=torch.float32).to(device)
     xtest=torch.tensor(np.array(cleaned_time_series[ntest:nvalid]),dtype=torch.float32).to(device)
@@ -48,14 +48,19 @@ def get_data(filename, batch_size=200, eval_batch_size=100, device='cpu'):
     train_data=batchify(xtrain, batch_size)
     val_data= batchify(xval, eval_batch_size)
     test_data = batchify(xtest, eval_batch_size)
-
+    # train_data.shape --> nb_batch, batch_size
     
     return(train_data,test_data,val_data)
 
-def get_batch(source,i,bptt):
+def get_batch(source,i,bptt,printer=False):
     seq_len=min(bptt, len(source)-(i+1))
     data=source[i:i+seq_len]
     data=torch.reshape(data,(seq_len,source.size(1),1))
     target=source[i+1:i+1+seq_len].reshape(-1) # on perd une dimension
         
     return data, target # en sortie on a bptt donnees, de longueurs batch_size
+
+def squeeze_last_dim(tensor): # apply before reshape
+    if len(tensor.shape)==3 and tensor.shape[-1]==1 :
+        return tensor[..., 0]
+    return tensor
