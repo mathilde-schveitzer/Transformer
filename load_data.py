@@ -110,3 +110,40 @@ def merge_data(a,b):
         c[k*(a.shape[1]+b.shape[1]):(k+1)*a.shape[1]+k*b.shape[1]]=a[k,:]
         c[(k+1)*(a.shape[1])+k*b.shape[1]:(k+1)*(a.shape[1]+b.shape[1])]=b[k,:]
     return(c)
+
+
+def get_data_for_predict(backast_length, data_set, device='cpu') :
+
+    
+    if len(data_set.shape)>1 :
+       
+        dim=train_set.shape[0]
+        n=data_set.shape[1]
+       
+
+        data_train = np.empty((0, backast_length, dim))
+
+        time_series_cleaned_for_predicting=np.zeros((1, backast_length, dim))
+       
+        for i in range(0,n,backast_length) : #on passe en revue le signal, dans l'ordre et en conservant le format utilise lors des autres sessions
+            time_series_cleaned_for_predicting=data_set[:,i:i+backast_length].reshape(1,backast_length,dim)
+           
+            data_train = np.vstack((data_train, time_series_cleaned_for_predicting_x))
+           
+
+
+    else :
+        n=data_set.shape[0]
+       
+        data_train = np.empty((0, backast_length))
+        time_series_cleaned_for_prediction=np.zeros((1, backast_length))
+       
+        for i in range(0,n,backast_length) : #on selectionne de facon aleatoire nb "bouts de signaux"
+            time_series_cleaned_for_predicting=train_set[i:i+backast_length]
+            data_train = np.vstack((data_train, time_series_cleaned_for_predicting_x))
+
+    print('data_train.shape : ', data_train.shape)
+
+    data_train=torch.tensor(data_train,dtype=torch.float32).to(device)
+                                
+    return data_train    
