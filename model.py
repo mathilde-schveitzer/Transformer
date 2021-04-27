@@ -140,9 +140,11 @@ class TransformerModel(nn.Module):
         for batch_id in range(0, len(xtest_list)):
        
             data,targets=xtest_list[batch_id].to(self.device),ytest_list[batch_id].to(self.device)
+
             data=data.transpose(0,1)
             output=self(data)
             loss=self._loss(output.reshape(-1),targets.transpose(0,1).reshape(-1)).item()
+
             test_loss.append(loss)
 
             if predict :
@@ -197,15 +199,40 @@ class TransformerModel(nn.Module):
            
             val_loss = self.evaluate(xtest, ytest, eval_bsz, True, filename, predict=False, verbose=verbose)
             train_loss = self.evaluate(xtrain, ytrain, bsz, False, filename, predict=False,verbose=verbose)
-           # self.scheduler(train_loss)
+
             store_loss[epoch-1]=train_loss
             store_val_loss[epoch-1]=val_loss
-            # for layer_name, param in self.named_parameters():
-            #     print(f"Layer: {layer_name} | Values : {param[:2]} \n")
 
        
         np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
         np.savetxt('./data/{}/val_loss.txt'.format(filename), store_val_loss)
+
+def evaluate_whole_signal(self,data_set,bsz,name,train=True):  
+    self.eval() # Turn on the evaluation mode (herited from module)
+
+    def split(arr, size):
+        arrays = []
+        while len(arr) > size:
+            slice_ = arr[:size]
+            arrays.append(slice_)
+            arr = arr[size:]
+        arrays.append(arr)
+        return arrays
+       
+    data_set_list=split(data_set, bsz)           
+    prediction=torch.zeros_like(data_set)
+    
+    for batch_id in range(0, len(data_set_list)):
+       
+        data,targets=xtest_list[batch_id].to(self.device),ytest_list[batch_id].to(self.device)
+
+        data=data.transpose(0,1)
+        output=self(data)        
+        output=output.transpose(0,1)
+        prediction[batch_id*output.shape[0]:(batch_id+1)*output.shape[0],:,:]=output
+
+    if train : torch.save(prediction, './data/{}/predictions_whole_train_set.pt'.format(name))
+    else : torch.save(prediction, './data/{}/predictions_whole_test_set.pt'.format(name))
 
 class PositionalEncoding(nn.Module):
 

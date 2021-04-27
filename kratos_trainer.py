@@ -10,7 +10,7 @@ import os
 
 def main(name,identifiant,device='cpu'):
     
-    nlimit=1
+    nlimit=4
 
     filename='nbeats_f100/train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
     filename_='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'
@@ -42,9 +42,9 @@ def main(name,identifiant,device='cpu'):
     nhid=256
     nlayers=2
     nMLP=128
-    nhead=2
+    nhead=4
     dropout=0.2
-    epochs=500
+    epochs=1000
     bsz=256
     eval_bsz=256
    
@@ -61,6 +61,14 @@ def main(name,identifiant,device='cpu'):
     print('=' * 89)
     print('| End of training | test loss {:5.2f} | train loss {:5.2f} | '.format(test_loss, train_loss))
     print('=' * 89)
+
+    data_set=get_data_for_predict(backast_length, train_set)
+    model.evaluate_whole_signal(self,data_set,bsz,name)
+
+    data_set_test=get_data_for_predict(backast_length, test_set)
+    model.evaluate_whole_signal(self,data_set_tes,eval_bsz,name,train=False)
+        
+
     print('---------- Name of the file : {} --------------'.format(name))
 
 
