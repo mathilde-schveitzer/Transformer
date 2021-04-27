@@ -1,4 +1,5 @@
 import csv
+from tqdm import tqdm
 import numpy as np
 import torch
 
@@ -24,7 +25,7 @@ def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='
         time_series_cleaned_fortesting_x=np.zeros((1, backast_length, dim))
         time_series_cleaned_fortesting_y=np.zeros((1, forecast_length, dim))
 
-        for i in range(nb) : #on selectionne de facon aleatoire nb "bouts de signaux"
+        for i in tqdm(range(nb)) : #on selectionne de facon aleatoire nb "bouts de signaux"
             j=np.random.randint(backast_length, ntrain - forecast_length)
             k=np.random.randint(backast_length, ntest - forecast_length)
             time_series_cleaned_fortraining_x=train_set[:,j- backast_length:j].reshape(1,backast_length,dim)
@@ -38,10 +39,10 @@ def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='
             xtest = np.vstack((xtest, time_series_cleaned_fortesting_x))
             ytest = np.vstack((ytest, time_series_cleaned_fortraining_y))
 
-        # print('xtrainshape : ', xtrain.shape)
-        # print('ytrainshape : ', ytrain.shape)
-        # print('ytestshape : ', ytest.shape)
-        # print('xtestshape : ', xtest.shape)
+        print('xtrainshape : ', xtrain.shape)
+        print('ytrainshape : ', ytrain.shape)
+        print('ytestshape : ', ytest.shape)
+        print('xtestshape : ', xtest.shape)
 
     else :
         ntrain=train_set.shape[0]
@@ -59,7 +60,7 @@ def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='
         time_series_cleaned_fortesting_x=np.zeros((1, backast_length))
         time_series_cleaned_fortesting_y=np.zeros((1, forecast_length))
 
-        for i in range(nb) : #on selectionne de facon aleatoire nb "bouts de signaux"
+        for i in tqdm(range(nb)) : #on selectionne de facon aleatoire nb "bouts de signaux"
             j=np.random.randint(backast_length, ntrain - forecast_length)
             k=np.random.randint(backast_length, ntest - forecast_length)
             time_series_cleaned_fortraining_x=train_set[j- backast_length:j]
