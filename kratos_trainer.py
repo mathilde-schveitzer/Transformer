@@ -10,7 +10,7 @@ import os
 
 def main(name,identifiant,device='cpu'):
     
-    nlimit=1
+    nlimit=15
 
     filename='nbeats_f100/train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
     filename_='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'
@@ -21,10 +21,6 @@ def main(name,identifiant,device='cpu'):
     train_set=normalize_data(train_set[:nlimit,:])
     test_set=normalize_data(test_set[:nlimit,:])
 
-    print(train_set)
-    print(test_set)
-
-       
     path='./data/{}'.format(name)
 
     if not os.path.exists(path) :
@@ -42,9 +38,9 @@ def main(name,identifiant,device='cpu'):
     nhid=256
     nlayers=2
     nMLP=128
-    nhead=2
+    nhead=4
     dropout=0.2
-    epochs=500
+    epochs=1000
     bsz=256
     eval_bsz=256
    
