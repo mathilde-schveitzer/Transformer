@@ -38,7 +38,7 @@ class TransformerModel(nn.Module):
         print('|T R A N S F O R M E R : Optimus Prime is ready |')
 
     def forward(self, input):
-        input.to(self.device)
+        input=input.to(self.device)
         
         input = self.encoder(input)
 

@@ -28,7 +28,7 @@ def main(name,identifiant,device='cpu'):
 
     backast_length=100
     forecast_length=100 #chemin de la facilite
-    nb=5500
+    nb=1000
     
     xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set)
     print('we got the data : xtrain.shape :', xtrain.shape)
