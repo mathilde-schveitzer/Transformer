@@ -23,7 +23,7 @@ class TransformerModel(nn.Module):
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)       
         self.pos_encod=pos_encod
         if pos_encod :
-            self.pos_encoder=PositionalEncoding(self.embed_dims,dropout)
+            self.pos_encoder=PositionalEncoding(self.embed_dims,device, dropout=dropout)
         self.decoder=Decoder(self.embed_dims, ninp, forecast_size,backast_size,device=device)
 
 
@@ -51,7 +51,7 @@ class TransformerModel(nn.Module):
 
         return _output
     
-    def do_training(self,xtrain,ytrain,verbose):
+    def do_training(self,xtrain,ytrain):
         self.train() # Turn on the train mode (herited from module)
         total_loss = 0.
         start_time = time.time()
@@ -67,7 +67,7 @@ class TransformerModel(nn.Module):
             data=data.transpose(0,1)
             
             self.optimizer.zero_grad()
-            output = self(data, verbose=verbose)
+            output = self(data)
             
             loss=self._loss(output.reshape(-1), targets.transpose(0,1).reshape(-1).to(self.device))
                         
@@ -172,7 +172,7 @@ class TransformerModel(nn.Module):
             xtrain_list=split(xtrain, bsz)
             ytrain_list=split(ytrain, bsz)
 
-            self.do_training(xtrain_list,ytrain_list,verbose)
+            self.do_training(xtrain_list,ytrain_list)
            
             val_loss = self.evaluate(xtest, ytest, eval_bsz, True, filename, predict=False, verbose=verbose)
             train_loss = self.evaluate(xtrain, ytrain, bsz, False, filename, predict=False,verbose=verbose)
@@ -186,7 +186,7 @@ class TransformerModel(nn.Module):
 
 class PositionalEncoding(nn.Module):
 
-    def __init__(self, d_model, dropout=0.1, max_len=5000):
+    def __init__(self, d_model, device, dropout=0.1, max_len=5000):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -197,15 +197,10 @@ class PositionalEncoding(nn.Module):
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer('pe', pe)
+        self.device=device
         
-    def forward(self, x, verbose=False):
-        pencod=self.pe[:x.shape[0], :]
-        if verbose :
-            print('-----------------------x ------------------------')
-            print(x.shape)
-            print('--------------------------- pencod ---------------------')
-            print(pencod)
-            print(pencod.shape)
+    def forward(self, x):
+        pencod=self.pe[:x.shape[0], :].to(self.device)
         x = x + self.pe[:x.shape[0], :]
         return x
 

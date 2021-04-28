@@ -1,8 +1,9 @@
 import csv
+from tqdm import tqdm
 import numpy as np
 import torch
 
-def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='cpu') :
+def get_data2(backast_length, forecast_length, nb, train_set, test_set) :
 
     
     if len(train_set.shape)>1 :
@@ -24,7 +25,7 @@ def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='
         time_series_cleaned_fortesting_x=np.zeros((1, backast_length, dim))
         time_series_cleaned_fortesting_y=np.zeros((1, forecast_length, dim))
 
-        for i in range(nb) : #on selectionne de facon aleatoire nb "bouts de signaux"
+        for i in tqdm(range(nb)) : #on selectionne de facon aleatoire nb "bouts de signaux"
             j=np.random.randint(backast_length, ntrain - forecast_length)
             k=np.random.randint(backast_length, ntest - forecast_length)
             time_series_cleaned_fortraining_x=train_set[:,j- backast_length:j].reshape(1,backast_length,dim)
@@ -37,12 +38,7 @@ def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='
         
             xtest = np.vstack((xtest, time_series_cleaned_fortesting_x))
             ytest = np.vstack((ytest, time_series_cleaned_fortraining_y))
-
-        # print('xtrainshape : ', xtrain.shape)
-        # print('ytrainshape : ', ytrain.shape)
-        # print('ytestshape : ', ytest.shape)
-        # print('xtestshape : ', xtest.shape)
-
+ 
     else :
         ntrain=train_set.shape[0]
         ntest=test_set.shape[0]
@@ -59,7 +55,7 @@ def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='
         time_series_cleaned_fortesting_x=np.zeros((1, backast_length))
         time_series_cleaned_fortesting_y=np.zeros((1, forecast_length))
 
-        for i in range(nb) : #on selectionne de facon aleatoire nb "bouts de signaux"
+        for i in tqdm(range(nb)) : #on selectionne de facon aleatoire nb "bouts de signaux"
             j=np.random.randint(backast_length, ntrain - forecast_length)
             k=np.random.randint(backast_length, ntest - forecast_length)
             time_series_cleaned_fortraining_x=train_set[j- backast_length:j]
@@ -73,17 +69,12 @@ def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='
             xtest = np.vstack((xtest, time_series_cleaned_fortesting_x))
             ytest = np.vstack((ytest, time_series_cleaned_fortraining_y))
 
-            print('xtrainshape : ', xtrain.shape)
-            print('ytrainshape : ', ytrain.shape)
-            print('ytestshape : ', ytest.shape)
-            print('xtestshape : ', xtest.shape)
-
         
 
-    xtrain=torch.tensor(xtrain,dtype=torch.float32).to(device)
-    ytrain=torch.tensor(ytrain,dtype=torch.float32).to(device)
-    xtest=torch.tensor(xtest,dtype=torch.float32).to(device)
-    ytest=torch.tensor(ytest, dtype=torch.float32).to(device)
+    xtrain=torch.tensor(xtrain,dtype=torch.float32)
+    ytrain=torch.tensor(ytrain,dtype=torch.float32)
+    xtest=torch.tensor(xtest,dtype=torch.float32)
+    ytest=torch.tensor(ytest, dtype=torch.float32)
 
     print('xtrainshape : ', xtrain.shape)
     print('ytrainshape : ', ytrain.shape)
@@ -109,3 +100,38 @@ def merge_data(a,b):
         c[k*(a.shape[1]+b.shape[1]):(k+1)*a.shape[1]+k*b.shape[1]]=a[k,:]
         c[(k+1)*(a.shape[1])+k*b.shape[1]:(k+1)*(a.shape[1]+b.shape[1])]=b[k,:]
     return(c)
+
+
+def get_data_for_predict(backast_length, data_set) :
+
+    
+    if len(data_set.shape)>1 :
+       
+        dim=train_set.shape[0]
+        n=data_set.shape[1]
+       
+
+        data_train = np.empty((0, backast_length, dim))
+
+        time_series_cleaned_for_predicting=np.zeros((1, backast_length, dim))
+       
+        for i in range(0,n,backast_length) : #on passe en revue le signal, dans l'ordre et en conservant le format utilise lors des autres sessions
+            time_series_cleaned_for_predicting=data_set[:,i:i+backast_length].reshape(1,backast_length,dim)
+           
+            data_train = np.vstack((data_train, time_series_cleaned_for_predicting_x))
+
+    else :
+        n=data_set.shape[0]
+       
+        data_train = np.empty((0, backast_length))
+        time_series_cleaned_for_prediction=np.zeros((1, backast_length))
+       
+        for i in range(0,n,backast_length) : #on selectionne de facon aleatoire nb "bouts de signaux"
+            time_series_cleaned_for_predicting=train_set[i:i+backast_length]
+            data_train = np.vstack((data_train, time_series_cleaned_for_predicting_x))
+
+    print('data_train.shape : ', data_train.shape)
+
+    data_train=torch.tensor(data_train,dtype=torch.float32)
+                                
+    return data_train    
