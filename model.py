@@ -9,7 +9,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import load_data as ld
 
-#test pour git numero 2
 class TransformerModel(nn.Module):
 
     def __init__(self, ninp, nhead, nhid, nlayers, nMLP, backast_size, forecast_size, pos_encod=False, dropout=0.5, device=torch.device('cpu')):
