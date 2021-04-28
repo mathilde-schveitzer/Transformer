@@ -3,7 +3,7 @@ from tqdm import tqdm
 import numpy as np
 import torch
 
-def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='cpu') :
+def get_data2(backast_length, forecast_length, nb, train_set, test_set) :
 
     
     if len(train_set.shape)>1 :
@@ -39,11 +39,6 @@ def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='
             xtest = np.vstack((xtest, time_series_cleaned_fortesting_x))
             ytest = np.vstack((ytest, time_series_cleaned_fortraining_y))
 
-        print('xtrainshape : ', xtrain.shape)
-        print('ytrainshape : ', ytrain.shape)
-        print('ytestshape : ', ytest.shape)
-        print('xtestshape : ', xtest.shape)
-
     else :
         ntrain=train_set.shape[0]
         ntest=test_set.shape[0]
@@ -74,17 +69,12 @@ def get_data2(backast_length, forecast_length, nb, train_set, test_set, device='
             xtest = np.vstack((xtest, time_series_cleaned_fortesting_x))
             ytest = np.vstack((ytest, time_series_cleaned_fortraining_y))
 
-            print('xtrainshape : ', xtrain.shape)
-            print('ytrainshape : ', ytrain.shape)
-            print('ytestshape : ', ytest.shape)
-            print('xtestshape : ', xtest.shape)
-
         
 
-    xtrain=torch.tensor(xtrain,dtype=torch.float32).to(device)
-    ytrain=torch.tensor(ytrain,dtype=torch.float32).to(device)
-    xtest=torch.tensor(xtest,dtype=torch.float32).to(device)
-    ytest=torch.tensor(ytest, dtype=torch.float32).to(device)
+    xtrain=torch.tensor(xtrain,dtype=torch.float32)
+    ytrain=torch.tensor(ytrain,dtype=torch.float32)
+    xtest=torch.tensor(xtest,dtype=torch.float32)
+    ytest=torch.tensor(ytest, dtype=torch.float32)
 
     print('xtrainshape : ', xtrain.shape)
     print('ytrainshape : ', ytrain.shape)
@@ -111,8 +101,7 @@ def merge_data(a,b):
         c[(k+1)*(a.shape[1])+k*b.shape[1]:(k+1)*(a.shape[1]+b.shape[1])]=b[k,:]
     return(c)
 
-
-def get_data_for_predict(backast_length, data_set, device='cpu') :
+def get_data_for_predict(backast_length, data_set) :
 
     
     if len(data_set.shape)>1 :
@@ -129,8 +118,6 @@ def get_data_for_predict(backast_length, data_set, device='cpu') :
             time_series_cleaned_for_predicting=data_set[:,i:i+backast_length].reshape(1,backast_length,dim)
            
             data_train = np.vstack((data_train, time_series_cleaned_for_predicting_x))
-           
-
 
     else :
         n=data_set.shape[0]
@@ -144,6 +131,7 @@ def get_data_for_predict(backast_length, data_set, device='cpu') :
 
     print('data_train.shape : ', data_train.shape)
 
-    data_train=torch.tensor(data_train,dtype=torch.float32).to(device)
+    data_train=torch.tensor(data_train,dtype=torch.float32)
+
                                 
     return data_train    

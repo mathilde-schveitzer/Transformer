@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import load_data as ld
 
+#test pour git numero 2
 class TransformerModel(nn.Module):
 
     def __init__(self, ninp, nhead, nhid, nlayers, nMLP, backast_size, forecast_size, pos_encod=False, dropout=0.5, device=torch.device('cpu')):
@@ -22,7 +23,7 @@ class TransformerModel(nn.Module):
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)       
         self.pos_encod=pos_encod
         if pos_encod :
-            self.pos_encoder=PositionalEncoding(self.embed_dims,dropout)
+            self.pos_encoder=PositionalEncoding(self.embed_dims,device, dropout=dropout)
         self.decoder=Decoder(self.embed_dims, ninp, forecast_size,backast_size,device=device)
 
 
@@ -36,32 +37,21 @@ class TransformerModel(nn.Module):
         
         print('|T R A N S F O R M E R : Optimus Prime is ready |')
 
-    def forward(self, input, verbose=False):
-        if verbose :
-            print('----- this is forward -------')
-        input = self.encoder(input).to(self.device)
+    def forward(self, input):
+        input=input.to(self.device)
+        
+        input = self.encoder(input)
+
         if self.pos_encod :
-            if verbose :
-                input=self.pos_encoder(input)
-            else :
-                input=self.pos_encoder(input)
+            input=self.pos_encoder(input)
+        
+        output = self.transformer_encoder(input)
 
-        if verbose :
-            print('----------pos_encoder : ', input.shape)
-
-        output = self.transformer_encoder(input).to(self.device)
-
-        if verbose :
-            print('---------- transformer : ', output.shape)
-
-        _output = self.decoder(output).to(self.device)
-
-        if verbose :
-            print('---------- decoder : ',_output.shape)
+        _output = self.decoder(output)
 
         return _output
     
-    def do_training(self,xtrain,ytrain,verbose):
+    def do_training(self,xtrain,ytrain):
         self.train() # Turn on the train mode (herited from module)
         total_loss = 0.
         start_time = time.time()
@@ -74,23 +64,12 @@ class TransformerModel(nn.Module):
         for k,batch_id in enumerate(shuffled_indices):
            
             data, targets = xtrain[batch_id], ytrain[batch_id]
-            data=data.transpose(0,1).to(self.device)
-            targets=targets.to(self.device)
-          
-
-            if verbose :
-                print('--------data :', data.shape)
-                print('--------target :', targets.shape)
-           
-            self.optimizer.zero_grad()
-            output = self(data, verbose=verbose)
-
-            print(output.shape)
-            print(targets.shape)
-            print(data.shape)
-
+            data=data.transpose(0,1)
             
-            loss=self._loss(output.reshape(-1), targets.transpose(0,1).reshape(-1))
+            self.optimizer.zero_grad()
+            output = self(data)
+            
+            loss=self._loss(output.reshape(-1), targets.transpose(0,1).reshape(-1).to(self.device))
                         
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
@@ -139,11 +118,10 @@ class TransformerModel(nn.Module):
         
         for batch_id in range(0, len(xtest_list)):
        
-            data,targets=xtest_list[batch_id].to(self.device),ytest_list[batch_id].to(self.device)
-
+            data,targets=xtest_list[batch_id],ytest_list[batch_id]
             data=data.transpose(0,1)
             output=self(data)
-            loss=self._loss(output.reshape(-1),targets.transpose(0,1).reshape(-1)).item()
+            loss=self._loss(output.reshape(-1),targets.transpose(0,1).reshape(-1).to(self.device)).item()
 
             test_loss.append(loss)
 
@@ -195,7 +173,7 @@ class TransformerModel(nn.Module):
             xtrain_list=split(xtrain, bsz)
             ytrain_list=split(ytrain, bsz)
 
-            self.do_training(xtrain_list,ytrain_list,verbose)
+            self.do_training(xtrain_list,ytrain_list)
            
             val_loss = self.evaluate(xtest, ytest, eval_bsz, True, filename, predict=False, verbose=verbose)
             train_loss = self.evaluate(xtrain, ytrain, bsz, False, filename, predict=False,verbose=verbose)
@@ -236,7 +214,7 @@ def evaluate_whole_signal(self,data_set,bsz,name,train=True):
 
 class PositionalEncoding(nn.Module):
 
-    def __init__(self, d_model, dropout=0.1, max_len=5000):
+    def __init__(self, d_model, device, dropout=0.1, max_len=5000):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -247,15 +225,10 @@ class PositionalEncoding(nn.Module):
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer('pe', pe)
+        self.device=device
         
-    def forward(self, x, verbose=False):
-        pencod=self.pe[:x.shape[0], :]
-        if verbose :
-            print('-----------------------x ------------------------')
-            print(x.shape)
-            print('--------------------------- pencod ---------------------')
-            print(pencod)
-            print(pencod.shape)
+    def forward(self, x):
+        pencod=self.pe[:x.shape[0], :].to(self.device)
         x = x + self.pe[:x.shape[0], :]
         return x
 

@@ -9,7 +9,6 @@ from model import *
 import os
 
 def main(name,identifiant,device='cpu'):
-    
     nlimit=4
 
     filename='nbeats_f100/train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
@@ -21,10 +20,6 @@ def main(name,identifiant,device='cpu'):
     train_set=normalize_data(train_set[:nlimit,:])
     test_set=normalize_data(test_set[:nlimit,:])
 
-    print(train_set)
-    print(test_set)
-
-       
     path='./data/{}'.format(name)
 
     if not os.path.exists(path) :
@@ -32,9 +27,9 @@ def main(name,identifiant,device='cpu'):
 
     backast_length=100
     forecast_length=100 #chemin de la facilite
-    nb=5500
+    nb=1000
     
-    xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set,device=device)
+    xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set)
     print('we got the data : xtrain.shape :', xtrain.shape)
     
     #Initiate an instance :
@@ -44,7 +39,7 @@ def main(name,identifiant,device='cpu'):
     nMLP=128
     nhead=4
     dropout=0.2
-    epochs=1000
+    epochs=10
     bsz=256
     eval_bsz=256
    
