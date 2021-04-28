@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import load_data as ld
 
-#test pour git numero 2
+
 class TransformerModel(nn.Module):
 
     def __init__(self, ninp, nhead, nhid, nlayers, nMLP, backast_size, forecast_size, pos_encod=False, dropout=0.5, device=torch.device('cpu')):
@@ -185,32 +185,32 @@ class TransformerModel(nn.Module):
         np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
         np.savetxt('./data/{}/val_loss.txt'.format(filename), store_val_loss)
 
-def evaluate_whole_signal(self,data_set,bsz,name,train=True):  
-    self.eval() # Turn on the evaluation mode (herited from module)
+    def evaluate_whole_signal(self,data_set,bsz,name,train=True):  
+        self.eval() # Turn on the evaluation mode (herited from module)
 
-    def split(arr, size):
-        arrays = []
-        while len(arr) > size:
-            slice_ = arr[:size]
-            arrays.append(slice_)
-            arr = arr[size:]
-        arrays.append(arr)
-        return arrays
+        def split(arr, size):
+            arrays = []
+            while len(arr) > size:
+                slice_ = arr[:size]
+                arrays.append(slice_)
+                arr = arr[size:]
+            arrays.append(arr)
+            return arrays
        
-    data_set_list=split(data_set, bsz)           
-    prediction=torch.zeros_like(data_set)
+        data_set_list=split(data_set, bsz)           
+        prediction=torch.zeros_like(data_set)
     
-    for batch_id in range(0, len(data_set_list)):
+        for batch_id in range(0, len(data_set_list)):
        
-        data,targets=xtest_list[batch_id].to(self.device),ytest_list[batch_id].to(self.device)
+            data=data_set_list[batch_id].to(self.device)
 
-        data=data.transpose(0,1)
-        output=self(data)        
-        output=output.transpose(0,1)
-        prediction[batch_id*output.shape[0]:(batch_id+1)*output.shape[0],:,:]=output
+            data=data.transpose(0,1)
+            output=self(data)        
+            output=output.transpose(0,1)
+            prediction[batch_id*output.shape[0]:(batch_id+1)*output.shape[0],:,:]=output
 
-    if train : torch.save(prediction, './data/{}/predictions_whole_train_set.pt'.format(name))
-    else : torch.save(prediction, './data/{}/predictions_whole_test_set.pt'.format(name))
+        if train : torch.save(prediction, './data/{}/predictions_whole_train_set.pt'.format(name))
+        else : torch.save(prediction, './data/{}/predictions_whole_test_set.pt'.format(name))
 
 class PositionalEncoding(nn.Module):
 

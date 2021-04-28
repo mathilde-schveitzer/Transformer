@@ -4,7 +4,7 @@ import torch.nn as nn
 import time
 import argparse
 import generate_signal as gs
-from load_data import get_data2, normalize_data
+from load_data import *
 from model import *
 import os
 
@@ -23,11 +23,12 @@ def main(name,identifiant,device='cpu'):
     path='./data/{}'.format(name)
 
     if not os.path.exists(path) :
-        os.makedirs(path)    
+        os.makedirs(path)
+    np.savetxt('./data/{}/data_train_set.txt'.format(name), train_set)
 
     backast_length=100
-    forecast_length=100 #chemin de la facilite
-    nb=1000
+    forecast_length=100
+    nb=5500
     
     xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set)
     print('we got the data : xtrain.shape :', xtrain.shape)
@@ -39,7 +40,7 @@ def main(name,identifiant,device='cpu'):
     nMLP=128
     nhead=4
     dropout=0.2
-    epochs=10
+    epochs=500
     bsz=256
     eval_bsz=256
    
@@ -58,10 +59,11 @@ def main(name,identifiant,device='cpu'):
     print('=' * 89)
 
     data_set=get_data_for_predict(backast_length, train_set)
-    model.evaluate_whole_signal(self,data_set,bsz,name)
+    torch.save(data_set,'./data/{}/get_train_data_for_predict.pt'.format(name))
+    model.evaluate_whole_signal(data_set,bsz,name)
 
     data_set_test=get_data_for_predict(backast_length, test_set)
-    model.evaluate_whole_signal(self,data_set_tes,eval_bsz,name,train=False)
+    model.evaluate_whole_signal(data_set_test,eval_bsz,name,train=False)
         
 
     print('---------- Name of the file : {} --------------'.format(name))

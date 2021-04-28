@@ -28,10 +28,10 @@ def get_data2(backast_length, forecast_length, nb, train_set, test_set) :
         for i in tqdm(range(nb)) : #on selectionne de facon aleatoire nb "bouts de signaux"
             j=np.random.randint(backast_length, ntrain - forecast_length)
             k=np.random.randint(backast_length, ntest - forecast_length)
-            time_series_cleaned_fortraining_x=train_set[:,j- backast_length:j].reshape(1,backast_length,dim)
-            time_series_cleaned_fortraining_y=train_set[:,j:j+forecast_length].reshape(1,forecast_length, dim)
-            time_series_cleaned_fortesting_x=test_set[:,k-backast_length:k].reshape(1,backast_length, dim)
-            time_series_cleaned_fortesting_y=test_set[:,k:k+forecast_length].reshape(1,forecast_length,dim)
+            time_series_cleaned_fortraining_x=train_set[:,j- backast_length:j].reshape(1,dim,backast_length).swapaxes(1,2)
+            time_series_cleaned_fortraining_y=train_set[:,j:j+forecast_length].reshape(1,dim,forecast_length).swapaxes(1,2)
+            time_series_cleaned_fortesting_x=test_set[:,k-backast_length:k].reshape(1, dim, backast_length).swapaxes(1,2)
+            time_series_cleaned_fortesting_y=test_set[:,k:k+forecast_length].reshape(1, dim, forecast_length).swapaxes(1,2)
 
             xtrain = np.vstack((xtrain, time_series_cleaned_fortraining_x))
             ytrain = np.vstack((ytrain, time_series_cleaned_fortraining_y))
@@ -106,7 +106,7 @@ def get_data_for_predict(backast_length, data_set) :
     
     if len(data_set.shape)>1 :
        
-        dim=train_set.shape[0]
+        dim=data_set.shape[0]
         n=data_set.shape[1]
        
 
@@ -115,9 +115,9 @@ def get_data_for_predict(backast_length, data_set) :
         time_series_cleaned_for_predicting=np.zeros((1, backast_length, dim))
        
         for i in range(0,n,backast_length) : #on passe en revue le signal, dans l'ordre et en conservant le format utilise lors des autres sessions
-            time_series_cleaned_for_predicting=data_set[:,i:i+backast_length].reshape(1,backast_length,dim)
+            time_series_cleaned_for_predicting=data_set[:,i:i+backast_length].reshape(1,dim,backast_length).swapaxes(1,2)
            
-            data_train = np.vstack((data_train, time_series_cleaned_for_predicting_x))
+            data_train = np.vstack((data_train, time_series_cleaned_for_predicting))
 
     else :
         n=data_set.shape[0]
@@ -127,7 +127,7 @@ def get_data_for_predict(backast_length, data_set) :
        
         for i in range(0,n,backast_length) : #on selectionne de facon aleatoire nb "bouts de signaux"
             time_series_cleaned_for_predicting=train_set[i:i+backast_length]
-            data_train = np.vstack((data_train, time_series_cleaned_for_predicting_x))
+            data_train = np.vstack((data_train, time_series_cleaned_for_predicting))
 
     print('data_train.shape : ', data_train.shape)
 
