@@ -30,7 +30,7 @@ class TransformerModel(nn.Module):
         self.parameters = nn.ParameterList(self.parameters)
         
         self.optimizer=torch.optim.Adam(self.parameters(),lr=1e-3,betas=(0.9,0.98))
-        self._loss=F.l1_loss
+        self._loss=F.smooth_l1_loss
 
         self.to(self.device)
         
@@ -68,7 +68,7 @@ class TransformerModel(nn.Module):
             self.optimizer.zero_grad()
             output = self(data)
             
-            loss=self._loss(output.reshape(-1), targets.transpose(0,1).reshape(-1).to(self.device))
+            loss=self._loss(output.reshape(-1), targets.transpose(0,1).reshape(-1).to(self.device), beta=0.01)
                         
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.parameters(), 0.5)
@@ -120,7 +120,7 @@ class TransformerModel(nn.Module):
             data,targets=xtest_list[batch_id],ytest_list[batch_id]
             data=data.transpose(0,1)
             output=self(data)
-            loss=self._loss(output.reshape(-1),targets.transpose(0,1).reshape(-1).to(self.device)).item()
+            loss=F.l1_loss(output.reshape(-1),targets.transpose(0,1).reshape(-1).to(self.device)).item()
 
             test_loss.append(loss)
 

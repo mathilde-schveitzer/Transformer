@@ -9,7 +9,7 @@ from model import *
 import os
 
 def main(name,identifiant,device='cpu'):
-    nlimit=4
+    nlimit=5
 
     filename='nbeats_f100/train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
     filename_='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'
@@ -40,7 +40,7 @@ def main(name,identifiant,device='cpu'):
     nMLP=128
     nhead=4
     dropout=0.2
-    epochs=500
+    epochs=1000
     bsz=256
     eval_bsz=256
    
