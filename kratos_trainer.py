@@ -28,7 +28,7 @@ def main(name,identifiant,device='cpu'):
 
     backast_length=100
     forecast_length=100
-    nb=5500
+    nb=100
     
     xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set)
     print('we got the data : xtrain.shape :', xtrain.shape)
@@ -40,7 +40,7 @@ def main(name,identifiant,device='cpu'):
     nMLP=128
     nhead=4
     dropout=0.2
-    epochs=500
+    epochs=1000
     bsz=256
     eval_bsz=256
    

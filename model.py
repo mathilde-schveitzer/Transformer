@@ -23,9 +23,9 @@ class TransformerModel(nn.Module):
         self.pos_encod=pos_encod
         if pos_encod :
             self.pos_encoder=PositionalEncoding(self.embed_dims,device, dropout=dropout)
-        self.decoder=Decoder(self.embed_dims, ninp, forecast_size,backast_size,device=device)
-
-
+            self.decoder=Decoder(self.embed_dims, ninp, forecast_size, 2*backast_size,device=device)
+        else :
+            self.decoder=Decoder(self.embed_dims, ninp, forecast_size, 2*backast_size,device=device)
         self.parameters = []
         self.parameters = nn.ParameterList(self.parameters)
         
@@ -227,9 +227,10 @@ class PositionalEncoding(nn.Module):
         self.device=device
         
     def forward(self, x):
-        pencod=self.pe[:x.shape[0], :].to(self.device)
-        x = x + self.pe[:x.shape[0], :]
-        return x
+        pencod=torch.zeros_like(x,dtype=torch.float) 
+        pencod=pencod+self.pe[:x.shape[0], :]
+        output=torch.cat((x, pencod), dim=0).to(self.device)
+        return output
 
 
 class MLP(nn.Module):
@@ -243,15 +244,6 @@ class MLP(nn.Module):
         output=x
         return(self.layers(output)) 
 
-class MLForecast(nn.Module) :
-    def __init__(self, forecast_size, backast_size, device='cpu') :
-        super(MLForecast, self).__init__()
-        self.MLP=MLP(backast_size, forecast_size, device)
-        self.to(device)
-
-    def forward(self, x):
-        input=x.transpose(0,2) # "[forecast_size][batch][ninp] => [ninp][batch][forecast_size]"
-        output=self.MLP(x)
         return(output)
 
 class Decoder(nn.Module) :
