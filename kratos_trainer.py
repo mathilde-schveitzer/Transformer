@@ -9,7 +9,7 @@ from model import *
 import os
 
 def main(name,identifiant,device='cpu'):
-    nlimit=4
+    nlimit=1
 
     filename='nbeats_f100/train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
     filename_='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'
@@ -41,8 +41,8 @@ def main(name,identifiant,device='cpu'):
     nhead=4
     dropout=0.2
     epochs=500
-    bsz=256
-    eval_bsz=256
+    bsz=128
+    eval_bsz=128
    
     model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length, pos_encod=True, dropout=dropout, device=device)
     
@@ -52,11 +52,11 @@ def main(name,identifiant,device='cpu'):
 
 
     model.fit(xtrain, ytrain, xtest, ytest, bsz, eval_bsz, epochs, name)
-    test_loss = model.evaluate(xtest, ytest, eval_bsz, True, name, predict=True)
-    train_loss = model.evaluate(xtrain, ytrain, bsz, False, name, predict=True)
-    print('=' * 89)
-    print('| End of training | test loss {:5.2f} | train loss {:5.2f} | '.format(test_loss, train_loss))
-    print('=' * 89)
+    # test_loss = model.evaluate(xtest, ytest, eval_bsz, True, name, predict=True)
+    # train_loss = model.evaluate(xtrain, ytrain, bsz, False, name, predict=True)
+    # print('=' * 89)
+    # print('| End of training | test loss {:5.2f} | train loss {:5.2f} | '.format(test_loss, train_loss))
+    # print('=' * 89)
 
     data_set=get_data_for_predict(backast_length, train_set)
     torch.save(data_set,'./data/{}/get_train_data_for_predict.pt'.format(name))
