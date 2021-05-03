@@ -109,3 +109,9 @@ def merge_data(a,b):
         c[k*(a.shape[1]+b.shape[1]):(k+1)*a.shape[1]+k*b.shape[1]]=a[k,:]
         c[(k+1)*(a.shape[1])+k*b.shape[1]:(k+1)*(a.shape[1]+b.shape[1])]=b[k,:]
     return(c)
+
+def merge_line(a,b,k):
+            merge=np.zeros(a.shape[1]+b.shape[1])
+            merge[:a.shape[1]]=a[k,:]
+            merge[a.shape[1]:]=b[k,:]
+            return(merge)
