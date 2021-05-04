@@ -9,7 +9,7 @@ from model import *
 import os
 
 def main(name,identifiant,device='cpu'):
-    nlimit=1
+    nlimit=30
 
     filename='nbeats_f100/train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
     filename_='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'

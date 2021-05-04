@@ -34,12 +34,20 @@ def normalize_data(x):
 
     return(0.5*(x1+x2))
 
-
-def main(id):
-    x=np.zeros((0,2)) # Time_step , Value
+def pretreatment(id):
+    
     time_series=np.zeros((1,2))
-    files=glob.glob("/data1/infantes/kratos/raw_data/dataset_2/SAT2/TM{}_*.csv".format(id))
+    path="/data1/infantes/kratos/raw_data/dataset_2/SAT2/TM{}_*.csv".format(id)
+    files=glob.glob(path)
+
+   
     for i in range(len(files)):
+        
+        namecsv=files[i].split('/')
+        namecsv=namecsv[-1]
+        name=namecsv.split('.')
+        name=name[0]
+        x=np.zeros((0,2))
         print(files[i])
         print('--------------file n* {} // {} -------'.format(i,len(files)))
         with open(files[i], newline='') as csvfile :
@@ -53,18 +61,19 @@ def main(id):
                              time_series[0,1]=column
     
                      x=np.vstack((x,time_series))
-    np.savetxt('./data/cleaned_time_series_TM{}.txt'.format(id),x)
-    # x=normalize_data(x)
-    # y=np.zeros((0,2))
-    # alpha=10**(-4)
-    # for k in range(x.shape[0]-1) :
-    #     if abs(x[k,1]-x[k,2])>alpha :
-    #         y=np.vstack((y,y[k,:]))
-    #         print(y.shape)
+                     if n % 1000 == 0 :
+                         print(x.shape)
+                    
+        np.savetxt('./data/{}.txt'.format(name),x)
 
-if __name__ == '__main__' :
-    parser=argparse.ArgumentParser()
-    parser.add_argument('id', help='Identify the TM you want to analyze')
-    args=parser.parse_args()
-    main(int(args.id))
+        return(name)
+    
+def from_txt_file_filter(x):
+    y=np.zeros((0,2))
+    alpha=10**(-2)
+    for k in range(x.shape[0]-1) :
+        if abs(x[k,1]-x[k+1,1])>=alpha :
+            y=np.vstack((y,x[k,:]))
+            print(y.shape)
+    return(y)
     
