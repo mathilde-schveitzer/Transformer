@@ -11,7 +11,7 @@ import load_data as ld
 
 class TransformerModel(nn.Module):
 
-    def __init__(self, ninp, nhead, nhid, nlayers, nMLP, backast_size, forecast_size, pos_encod=False, dropout=0.5, device=torch.device('cpu')):
+    def __init__(self, ninp, nhead, nhid, nlayers, nMLP, ntime, backast_size, forecast_size, pos_encod=False, dropout=0.5, device=torch.device('cpu')):
         super(TransformerModel, self).__init__()
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
         self.model_type = 'Transformer'
@@ -22,7 +22,7 @@ class TransformerModel(nn.Module):
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)       
         self.pos_encod=pos_encod
         if pos_encod :
-            self.pos_encoder=PositionalEncoding(self.embed_dims,device, dropout=dropout)
+            self.pos_encoder=Time2Vec(ntime, self.device)
         self.decoder=Decoder(self.embed_dims, ninp, forecast_size,backast_size,device=device)
 
 
@@ -269,3 +269,30 @@ class Decoder(nn.Module) :
         if verbose :
             print('encoder output :', output.shape)            
         return(output.transpose(0,2))
+
+class Time2Vec(nn.Module) :
+    
+    def __init__(self, nout, device) :
+        super(Time2Vec, self).__init__()
+        self.wb=nn.Linear(1,1) # i=0
+        self.wa=nn.Linear(1,nout-1)
+        self.nout=nout
+        self.to(device)
+        self.device=device
+
+    def forward(self, x) :
+        dmodel=x.shape[0]
+        print(dmodel)
+        print(x.shape)
+        time=torch.tensor(ld.normalize_data(np.arange(dmodel))).to(self.device) # on obtient un temps normalise [-0.5,+0.5]
+        t2v=torch.empty(self.nout*dmodel).to(self.device)
+
+        for k in range(x.shape[0]):
+            t2v[k]=self.wb(torch.tensor([time[k]]))
+            t2v[k:k+nout-1]=torch.sin(self.wa(torch.tensor([time[k]])))
+
+        outout=torch.cat((x, t2v), dim=0).to(self.device)
+
+        return(output)
+            
+        

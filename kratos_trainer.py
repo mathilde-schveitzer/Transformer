@@ -43,8 +43,9 @@ def main(name,identifiant,device='cpu'):
     epochs=500
     bsz=256
     eval_bsz=256
-   
-    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length, pos_encod=True, dropout=dropout, device=device)
+    ntime=4
+    
+    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, ntime, backast_length, forecast_length, pos_encod=True, dropout=dropout, device=device)
     
     print("Model structure: ", model, "\n\n")
     for layer_name, param in model.named_parameters():

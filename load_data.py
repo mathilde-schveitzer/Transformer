@@ -84,7 +84,7 @@ def get_data2(backast_length, forecast_length, nb, train_set, test_set) :
     return xtrain, ytrain, xtest, ytest    
     
 def normalize_data(x):
-    "value will be btwm 0 and 1"
+    "value will be btwm -0.5 and 0.5"
     min=np.amin(x)
     max=np.amax(x)
 
