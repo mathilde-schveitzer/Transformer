@@ -9,7 +9,7 @@ from model import *
 import os
 
 def main(name,identifiant,device='cpu'):
-    nlimit=4
+    nlimit=2
 
     filename='nbeats_f100/train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
     filename_='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'
@@ -17,8 +17,8 @@ def main(name,identifiant,device='cpu'):
     train_set=gs.register_signal(filename).transpose() #[time_step]x[dim] > [dim]x[time_step]
     test_set=gs.register_signal(filename_).transpose()
 
-    train_set=normalize_data(train_set[:nlimit,:])
-    test_set=normalize_data(test_set[:nlimit,:])
+    train_set=normalize_data(train_set[nlimit-1:nlimit,:])
+    test_set=normalize_data(test_set[nlimit-1:nlimit,:])
 
     path='./data/{}'.format(name)
 
@@ -44,7 +44,7 @@ def main(name,identifiant,device='cpu'):
     bsz=256
     eval_bsz=256
    
-    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length, pos_encod=True, dropout=dropout, device=device)
+    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length, pos_encod=False, dropout=dropout, device=device)
     
     print("Model structure: ", model, "\n\n")
     for layer_name, param in model.named_parameters():
