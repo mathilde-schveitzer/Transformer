@@ -8,21 +8,19 @@ import random
 import torch.nn as nn
 import torch.nn.functional as F
 import load_data as ld
+from periodic_activation import SineActivation
 
 class TransformerModel(nn.Module):
 
-    def __init__(self, ninp, nhead, nhid, nlayers, nMLP, ntime, backast_size, forecast_size, pos_encod=False, dropout=0.5, device=torch.device('cpu')):
+    def __init__(self, ninp, nhead, nhid, nlayers, nMLP, backast_size, forecast_size, dropout=0.5, device=torch.device('cpu')):
         super(TransformerModel, self).__init__()
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
         self.model_type = 'Transformer'
         self.embed_dims=ninp*nhead
         self.device = device
         encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout, activation='gelu')
-        self.encoder=MLP(ninp, self.embed_dims, device=device)
+        self.encoder=Encoder(ninp, self.embed_dims, hidden_dim=128, device=device)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)       
-        self.pos_encod=pos_encod
-        if pos_encod :
-            self.pos_encoder=Time2Vec(ntime, self.device)
         self.decoder=Decoder(self.embed_dims, ninp, forecast_size,backast_size,device=device)
 
 
@@ -34,15 +32,12 @@ class TransformerModel(nn.Module):
 
         self.to(self.device)
         
-        print('|T R A N S F O R M E R : Optimus Prime is ready |')
+        print('| T R A N S F O R M E R : Optimus Prime is ready |')
 
     def forward(self, input):
-        input=input.to(self.device)
+        input=input.to(self.device) #dtype=float32
         
         input = self.encoder(input)
-
-        if self.pos_encod :
-            input=self.pos_encoder(input)
         
         output = self.transformer_encoder(input)
 
@@ -76,8 +71,8 @@ class TransformerModel(nn.Module):
 
             total_loss += loss.item()
             print('----------- total loss :', loss.item())
-            log_interval = 1
-            if k % log_interval == 50 : # donc tous les "log_interval" batchs
+            log_interval = 10
+            if k % log_interval == 0 : # donc tous les "log_interval" batchs
                 print(targets)
                 print(output)
                 cur_loss = total_loss / log_interval
@@ -87,7 +82,7 @@ class TransformerModel(nn.Module):
                 start_time = time.time()
                 total_loss=0
 
-    def evaluate(self,xtest, ytest, bsz, val, name, predict=False, verbose=False):  
+    def evaluate(self,xtest, ytest, bsz, val, name, predict=False):  
         self.eval() # Turn on the evaluation mode (herited from module)
 
         def split(arr, size):
@@ -102,13 +97,6 @@ class TransformerModel(nn.Module):
         xtest_list=split(xtest, bsz)
         ytest_list=split(ytest,bsz)
         assert len(xtest_list)==len(ytest_list)
-
-        if verbose :
-           if val :
-               print('---VAL---')
-       
-           else :
-               print('---PAVAL---')
        
         if predict :
             prediction=torch.zeros_like(ytest)
@@ -168,14 +156,15 @@ class TransformerModel(nn.Module):
             torch.save(ytest,'./data/{}/ytest.pt'.format(filename))
             
         for epoch in range(1, epochs + 1):
+            print('-----------epoch # {} / {} ----------------'.format(epoch,epochs))
             epoch_start_time = time.time()
             xtrain_list=split(xtrain, bsz)
             ytrain_list=split(ytrain, bsz)
 
             self.do_training(xtrain_list,ytrain_list)
            
-            val_loss = self.evaluate(xtest, ytest, eval_bsz, True, filename, predict=False, verbose=verbose)
-            train_loss = self.evaluate(xtrain, ytrain, bsz, False, filename, predict=False,verbose=verbose)
+            val_loss = self.evaluate(xtest, ytest, eval_bsz, True, filename, predict=False)
+            train_loss = self.evaluate(xtrain, ytrain, bsz, False, filename, predict=False)
 
             store_loss[epoch-1]=train_loss
             store_val_loss[epoch-1]=val_loss
@@ -270,29 +259,44 @@ class Decoder(nn.Module) :
             print('encoder output :', output.shape)            
         return(output.transpose(0,2))
 
-class Time2Vec(nn.Module) :
+class Time2Vec(nn.Module) : # this version will work if n=1
     
-    def __init__(self, nout, device) :
+    def __init__(self, hidden_dim, device) :
         super(Time2Vec, self).__init__()
-        self.wb=nn.Linear(1,1) # i=0
-        self.wa=nn.Linear(1,nout-1)
-        self.nout=nout
-        self.to(device)
+        self.l1 = SineActivation(1,hidden_dim)
+        self.fc1 = nn.Linear(hidden_dim, 2)
         self.device=device
-
+        self.to(device)
+        
     def forward(self, x) :
-        dmodel=x.shape[0]
-        print(dmodel)
-        print(x.shape)
-        time=torch.tensor(ld.normalize_data(np.arange(dmodel))).to(self.device) # on obtient un temps normalise [-0.5,+0.5]
-        t2v=torch.empty(self.nout*dmodel).to(self.device)
-
-        for k in range(x.shape[0]):
-            t2v[k]=self.wb(torch.tensor([time[k]]))
-            t2v[k:k+nout-1]=torch.sin(self.wa(torch.tensor([time[k]])))
-
-        outout=torch.cat((x, t2v), dim=0).to(self.device)
-
+        time=torch.tensor(ld.normalize_data(np.arange(x.shape[0])), dtype=torch.float)
+        output=torch.empty(0).to(self.device)
+        print(output.dtype)
+        for tau in time :
+            tau=tau.unsqueeze(0).to(self.device)
+            out=self.l1(tau)
+            out=self.fc1(out)
+            output=torch.cat((output, out), dim=0)
         return(output)
-            
+
+class Encoder(nn.Module) : #built for n=1
+
+    def __init__(self, ninp, nout, hidden_dim, device) :
+        super(Encoder, self).__init__()
+        self.t2v=Time2Vec(hidden_dim, device)
+        self.fc1=nn.Linear(3*ninp,nout)
+        self.device=device
+        self.to(device)
+
+    def forward(self, x):
+        t2vec=self.t2v(x)
+        print(t2vec.shape)
+        y=torch.zeros((x.shape[0],x.shape[1],x.shape[2]+2)).to(self.device) # to modify for n>1
+        for i in range(x.shape[1]) :
+            y[:,i,:]=torch.cat((x[:,i,:],t2vec),dim=1) # [100]x[1], [100]x[2]
+        print(y.shape)
+        output=self.fc1(y)
+        print(output.shape)
+        return(output)
+                    
         

@@ -9,7 +9,7 @@ from model import *
 import os
 
 def main(name,identifiant,device='cpu'):
-    nlimit=4
+    nlimit=1
 
     filename='nbeats_f100/train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
     filename_='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'
@@ -43,9 +43,8 @@ def main(name,identifiant,device='cpu'):
     epochs=500
     bsz=256
     eval_bsz=256
-    ntime=4
     
-    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, ntime, backast_length, forecast_length, pos_encod=True, dropout=dropout, device=device)
+    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length, dropout=dropout, device=device)
     
     print("Model structure: ", model, "\n\n")
     for layer_name, param in model.named_parameters():
