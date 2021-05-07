@@ -9,7 +9,7 @@ from model import *
 import os
 
 def main(name,identifiant,device='cpu'):
-    nlimit=5
+    nlimit=0
 
     filename='nbeats_f100/train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
     filename_='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'
@@ -26,9 +26,9 @@ def main(name,identifiant,device='cpu'):
         os.makedirs(path)
     np.savetxt('./data/{}/data_train_set.txt'.format(name), train_set)
 
-    backast_length=100
-    forecast_length=100
-    nb=1000
+    backast_length=60
+    forecast_length=40
+    nb=2500
     
     xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set)
     print('we got the data : xtrain.shape :', xtrain.shape)
@@ -44,7 +44,7 @@ def main(name,identifiant,device='cpu'):
     bsz=256
     eval_bsz=256
     
-    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length,pos_encod=False, dropout=dropout, device=device)
+    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length, dropout=dropout, device=device)
     
     print("Model structure: ", model, "\n\n")
     for layer_name, param in model.named_parameters():
