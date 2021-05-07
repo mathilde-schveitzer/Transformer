@@ -26,8 +26,8 @@ def main(name,identifiant,device='cpu'):
         os.makedirs(path)
     np.savetxt('./data/{}/data_train_set.txt'.format(name), train_set)
 
-    backast_length=100
-    forecast_length=100
+    backast_length=50
+    forecast_length=50
     nb=2500
     
     xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set)
@@ -44,7 +44,7 @@ def main(name,identifiant,device='cpu'):
     bsz=256
     eval_bsz=256
    
-    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length, pos_encod=True, dropout=dropout, device=device)
+    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length, pos_encod=False, dropout=dropout, device=device)
     
     print("Model structure: ", model, "\n\n")
     for layer_name, param in model.named_parameters():
