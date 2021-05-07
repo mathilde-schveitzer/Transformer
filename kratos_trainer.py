@@ -27,7 +27,7 @@ def main(name,identifiant,device='cpu'):
     np.savetxt('./data/{}/data_train_set.txt'.format(name), train_set)
 
     backast_length=60
-    forecast_length=40
+    forecast_length=60
     nb=2500
     
     xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set)
