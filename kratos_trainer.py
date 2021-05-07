@@ -9,7 +9,7 @@ from model import *
 import os
 
 def main(name,identifiant,device='cpu'):
-    nlimit=2
+    nlimit=4
 
     filename='nbeats_f100/train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
     filename_='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'
@@ -17,8 +17,8 @@ def main(name,identifiant,device='cpu'):
     train_set=gs.register_signal(filename).transpose() #[time_step]x[dim] > [dim]x[time_step]
     test_set=gs.register_signal(filename_).transpose()
 
-    train_set=normalize_data(train_set[nlimit-1:nlimit,:])
-    test_set=normalize_data(test_set[nlimit-1:nlimit,:])
+    train_set=normalize_data(train_set[nlimit:nlimit+1,:])
+    test_set=normalize_data(test_set[nlimit:nlimit+1,:])
 
     path='./data/{}'.format(name)
 
@@ -28,7 +28,7 @@ def main(name,identifiant,device='cpu'):
 
     backast_length=100
     forecast_length=100
-    nb=5500
+    nb=1000
     
     xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set)
     print('we got the data : xtrain.shape :', xtrain.shape)
@@ -40,7 +40,7 @@ def main(name,identifiant,device='cpu'):
     nMLP=128
     nhead=4
     dropout=0.2
-    epochs=500
+    epochs=100
     bsz=256
     eval_bsz=256
    
