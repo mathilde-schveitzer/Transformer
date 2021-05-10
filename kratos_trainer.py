@@ -40,7 +40,7 @@ def main(name,identifiant,device='cpu'):
     nMLP=128
     nhead=4
     dropout=0.2
-    epochs=200
+    epochs=50
     bsz=256
     eval_bsz=256
     

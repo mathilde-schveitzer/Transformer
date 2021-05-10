@@ -269,14 +269,8 @@ class Time2Vec(nn.Module) : # this version will work if n=1
         self.to(device)
         
     def forward(self, x) :
-        time=torch.tensor(ld.normalize_data(np.arange(x.shape[0])), dtype=torch.float)
-        output=torch.empty(0).to(self.device)
-        print(output.dtype)
-        for tau in time :
-            tau=tau.unsqueeze(0).to(self.device)
-            out=self.l1(tau)
-            out=self.fc1(out)
-            output=torch.cat((output, out), dim=0)
+        time=torch.tensor(ld.normalize_data(np.arange(x.shape[0])), dtype=torch.float, device=self.device)
+        output=self.fc1(self.l1(time.unsqueeze(1)))
         return(output)
 
 class Encoder(nn.Module) : #built for n=1
@@ -290,13 +284,10 @@ class Encoder(nn.Module) : #built for n=1
 
     def forward(self, x):
         t2vec=self.t2v(x)
-        print(t2vec.shape)
         y=torch.zeros((x.shape[0],x.shape[1],x.shape[2]+2)).to(self.device) # to modify for n>1
         for i in range(x.shape[1]) :
             y[:,i,:]=torch.cat((x[:,i,:],t2vec),dim=1) # [100]x[1], [100]x[2]
-        print(y.shape)
         output=self.fc1(y)
-        print(output.shape)
         return(output)
                     
         
