@@ -4,86 +4,57 @@ import numpy as np
 import torch
 import glob
 
-def get_data2(backast_length, forecast_length, nb, train_set, test_set) :
+def get_data2(backast_length, forecast_length, n_interval, train_set, test_set) :
 
     
-    if len(train_set.shape)>1 :
-        assert train_set.shape[0]==test_set.shape[0], 'train and test sets should have same dimension'
-        dim=train_set.shape[0]
-        ntrain=train_set.shape[1]
-        ntest=test_set.shape[1]
+    assert len(train_set.shape)>1, 'please squeeze your data'
+    assert train_set.shape[0]==test_set.shape[0], 'train and test sets should have same dimension'
+    dim=train_set.shape[0]
+    ntrain=train_set.shape[1]
+    ntest=test_set.shape[1]
 
-        xtrain = np.empty((0, backast_length, dim))
-        ytrain = np.empty((0, forecast_length, dim))
-    
-        xtest = np.empty((0, backast_length, dim))
-        ytest = np.empty((0, forecast_length, dim))
+    xtrain = np.empty((0, backast_length, dim))
+    ytrain = np.empty((0, forecast_length, dim))
+
+    xtest = np.empty((0, backast_length, dim))
+    ytest = np.empty((0, forecast_length, dim))
 
 
-        time_series_cleaned_fortraining_x=np.zeros((1, backast_length, dim))
-        time_series_cleaned_fortraining_y=np.zeros((1, forecast_length, dim))
+    time_series_cleaned_fortraining_x=np.zeros((1, backast_length, dim))
+    time_series_cleaned_fortraining_y=np.zeros((1, forecast_length, dim))
 
-        time_series_cleaned_fortesting_x=np.zeros((1, backast_length, dim))
-        time_series_cleaned_fortesting_y=np.zeros((1, forecast_length, dim))
+    time_series_cleaned_fortesting_x=np.zeros((1, backast_length, dim))
+    time_series_cleaned_fortesting_y=np.zeros((1, forecast_length, dim))
 
-        length=forecast_length+backast_length
+    length=forecast_length+backast_length
 
-        for i in tqdm(range(0,ntrain-length,length)) :
-
-            time_series_cleaned_fortraining_x=train_set[:,i:i+backast_length].reshape(1,dim,backast_length).swapaxes(1,2)
-            time_series_cleaned_fortraining_y=train_set[:,(i+backast_length):(i+backast_length+forecast_length)].reshape(1,dim,forecast_length).swapaxes(1,2)
+    for i in tqdm(range(0,ntrain-length-backast_length-n_interval*10,backast_length)) :
+        for gap in range(0,n_interval*10,10) :
+            print(i,gap)
+            time_series_cleaned_fortraining_x=train_set[:,i+gap:i+gap+backast_length].reshape(1,dim,backast_length).swapaxes(1,2)
+            time_series_cleaned_fortraining_y=train_set[:,(i+gap+backast_length):(i+gap+backast_length+forecast_length)].reshape(1,dim,forecast_length).swapaxes(1,2)
 
             xtrain = np.vstack((xtrain, time_series_cleaned_fortraining_x))
             ytrain = np.vstack((ytrain, time_series_cleaned_fortraining_y))
 
-        for k in tqdm(range(0,ntest-length,length)):
-            time_series_cleaned_fortesting_x=test_set[:,k:k+backast_length].reshape(1, dim, backast_length).swapaxes(1,2)
-            time_series_cleaned_fortesting_y=test_set[:,k+backast_length:(k+forecast_length+backast_length)].reshape(1, dim, forecast_length).swapaxes(1,2)
-        
-            xtest = np.vstack((xtest, time_series_cleaned_fortesting_x))
-            ytest = np.vstack((ytest, time_series_cleaned_fortraining_y))
-
-    else :
-        ntrain=train_set.shape[0]
-        ntest=test_set.shape[0]
-        print(ntrain)
-        print(ntest)
-        
-        xtrain = np.empty((0, backast_length))
-        ytrain = np.empty((0, forecast_length))
-    
-        xtest = np.empty((0, backast_length))
-        ytest = np.empty((0, forecast_length))
-
-
-        time_series_cleaned_fortraining_x=np.zeros((1, backast_length))
-        time_series_cleaned_fortraining_y=np.zeros((1, forecast_length))
-
-        time_series_cleaned_fortesting_x=np.zeros((1, backast_length))
-        time_series_cleaned_fortesting_y=np.zeros((1, forecast_length))
-
-        for i in tqdm(range(0,ntrain,backast_length+forecast_length)) :
-            
-            time_series_cleaned_fortraining_x=train_set[i:i+backast_length]
-            time_series_cleaned_fortraining_y=train_set[i+backast_length:i+forecast_length+backast_length]
-            xtrain = np.vstack((xtrain, time_series_cleaned_fortraining_x))
-            ytrain = np.vstack((ytrain, time_series_cleaned_fortraining_y))
-
-        for j in tqdm(range(0,ntest,backast_length+forecast_length)):
-
-            time_series_cleaned_fortesting_x=test_set[j:j+backast_length]
-            time_series_cleaned_fortesting_y=test_set[j+backast_length:j+forecast_length+backast_length]
+    for k in tqdm(range(0,ntest-length-n_interval*10,backast_length)):
+        for gap in range(0,n_interval*10,10) : #multiplie par n_interval le nb de donnees utilisables
+            time_series_cleaned_fortesting_x=test_set[:,k+gap:k+gap+backast_length].reshape(1, dim, backast_length).swapaxes(1,2)
+            time_series_cleaned_fortesting_y=test_set[:,k+gap+backast_length:(k+gap+forecast_length+backast_length)].reshape(1, dim, forecast_length).swapaxes(1,2)
 
             xtest = np.vstack((xtest, time_series_cleaned_fortesting_x))
             ytest = np.vstack((ytest, time_series_cleaned_fortraining_y))
 
-        
+    xtrain,ytrain=shuffle_in_unison(xtrain, ytrain)
+
+    xtest,ytest=shuffle_in_unison(xtest, ytest)
 
     xtrain=torch.tensor(xtrain,dtype=torch.float32)
     ytrain=torch.tensor(ytrain,dtype=torch.float32)
     xtest=torch.tensor(xtest,dtype=torch.float32)
     ytest=torch.tensor(ytest, dtype=torch.float32)
 
+    
     print('xtrainshape : ', xtrain.shape)
     print('ytrainshape : ', ytrain.shape)
     print('ytestshape : ', ytest.shape)
@@ -186,3 +157,9 @@ def register_training_signal(nlimit) :
     x=normalize_data(x)
     return(x)
         
+def shuffle_in_unison(a, b):
+    rng_state = np.random.get_state()
+    np.random.shuffle(a)
+    np.random.set_state(rng_state)
+    np.random.shuffle(b)
+    return(a,b)
