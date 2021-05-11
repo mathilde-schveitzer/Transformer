@@ -3,23 +3,22 @@ import torch
 import torch.nn as nn
 import time
 import argparse
-import generate_signal as gs
 from load_data import *
 from model import *
 import os
 
-def main(name,identifiant,device='cpu'):
-    nlimit=0
-
-    filename='nbeats_f100/train/SAT2_10_minutes_future100_{}.csv'.format(identifiant)
-    filename_='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'
+def main(name,nlimit,device='cpu'):
+    
+    test_path='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'
    
-    train_set=gs.register_signal(filename).transpose() #[time_step]x[dim] > [dim]x[time_step]
-    test_set=gs.register_signal(filename_).transpose()
+    train_set=register_training_signal(nlimit).transpose() #[time_step]x[dim] > [dim]x[time_step]
+    test_set=read_signal(test_path).transpose()
+    test_set=normalize_data(test_set[:nlimit+1,:])
+    print(test_set.shape)
+    print(train_set.shape)
 
-    train_set=normalize_data(train_set[nlimit:nlimit+1,:])
-    test_set=normalize_data(test_set[nlimit:nlimit+1,:])
 
+    
     path='./data/{}'.format(name)
 
     if not os.path.exists(path) :
@@ -27,12 +26,19 @@ def main(name,identifiant,device='cpu'):
     np.savetxt('./data/{}/data_train_set.txt'.format(name), train_set)
     np.savetxt('./data/{}/data_test_set.txt'.format(name), test_set)
     
-    backast_length=100
-    forecast_length=100
+
+    backast_length=30
+    forecast_length=30
     nb=5000
     
     xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set)
     print('we got the data : xtrain.shape :', xtrain.shape)
+    torch.save(xtrain,'./data/{}/xtrain.pt'.format(name))
+    torch.save(ytrain,'./data/{}/ytrain.pt'.format(name))
+    torch.save(ytest,'./data/{}/ytest.pt'.format(name))
+    torch.save(xtest,'./data/{}/xtest.pt'.format(name))
+
+
     
     #Initiate an instance :
     ninp=xtrain.shape[-1]
@@ -41,9 +47,9 @@ def main(name,identifiant,device='cpu'):
     nMLP=128
     nhead=4
     dropout=0.2
-    epochs=100
-    bsz=256
-    eval_bsz=256
+    epochs=200
+    bsz=128
+    eval_bsz=128
    
     model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length, pos_encod=False, dropout=dropout, device=device)
     
@@ -59,13 +65,13 @@ def main(name,identifiant,device='cpu'):
     print('| End of training | test loss {:5.2f} | train loss {:5.2f} | '.format(test_loss, train_loss))
     print('=' * 89)
 
-    data_set=get_data_for_predict(backast_length, train_set)
-    torch.save(data_set,'./data/{}/get_train_data_for_predict.pt'.format(name))
-    model.evaluate_whole_signal(data_set,bsz,name)
+    # data_set=get_data_for_predict(backast_length, train_set)
+    # torch.save(data_set,'./data/{}/get_train_data_for_predict.pt'.format(name))
+    # model.evaluate_whole_signal(data_set,bsz,name)
 
-    data_test_set=get_data_for_predict(backast_length, test_set)
-    torch.save(data_test_set, './data/{}/get_test_data_for_predict.pt'.format(name))
-    model.evaluate_whole_signal(data_test_set,eval_bsz,name,train=False)
+    # data_test_set=get_data_for_predict(backast_length, test_set)
+    # torch.save(data_test_set, './data/{}/get_test_data_for_predict.pt'.format(name))
+    # model.evaluate_whole_signal(data_test_set,eval_bsz,name,train=False)
         
 
     print('---------- Name of the file : {} --------------'.format(name))
