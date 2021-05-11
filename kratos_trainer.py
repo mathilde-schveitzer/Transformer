@@ -25,10 +25,11 @@ def main(name,identifiant,device='cpu'):
     if not os.path.exists(path) :
         os.makedirs(path)
     np.savetxt('./data/{}/data_train_set.txt'.format(name), train_set)
-
-    backast_length=50
-    forecast_length=50
-    nb=2500
+    np.savetxt('./data/{}/data_test_set.txt'.format(name), test_set)
+    
+    backast_length=100
+    forecast_length=100
+    nb=5000
     
     xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, nb, train_set, test_set)
     print('we got the data : xtrain.shape :', xtrain.shape)
@@ -40,7 +41,7 @@ def main(name,identifiant,device='cpu'):
     nMLP=128
     nhead=4
     dropout=0.2
-    epochs=200
+    epochs=100
     bsz=256
     eval_bsz=256
    
@@ -62,8 +63,9 @@ def main(name,identifiant,device='cpu'):
     torch.save(data_set,'./data/{}/get_train_data_for_predict.pt'.format(name))
     model.evaluate_whole_signal(data_set,bsz,name)
 
-    data_set_test=get_data_for_predict(backast_length, test_set)
-    model.evaluate_whole_signal(data_set_test,eval_bsz,name,train=False)
+    data_test_set=get_data_for_predict(backast_length, test_set)
+    torch.save(data_test_set, './data/{}/get_test_data_for_predict.pt'.format(name))
+    model.evaluate_whole_signal(data_test_set,eval_bsz,name,train=False)
         
 
     print('---------- Name of the file : {} --------------'.format(name))
