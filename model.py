@@ -278,16 +278,16 @@ class Encoder(nn.Module) : #built for n=1
     def __init__(self, ninp, nout, hidden_dim, device) :
         super(Encoder, self).__init__()
         self.t2v=Time2Vec(hidden_dim, device)
-        self.fc1=nn.Linear(3*ninp,nout)
+        self.fc1=nn.Linear(ninp+2,nout)
         self.device=device
         self.to(device)
 
     def forward(self, x):
         t2vec=self.t2v(x)
-        y=torch.zeros((x.shape[0],x.shape[1],x.shape[2]+2)).to(self.device) # to modify for n>1
-        for i in range(x.shape[1]) :
-            y[:,i,:]=torch.cat((x[:,i,:],t2vec),dim=1) # [100]x[1], [100]x[2]
-        output=self.fc1(y)
+        t2vec_=torch.zeros((x.shape[1],x.shape[0],2)).to(self.device) #python refuse l'addition si les dimensions 1 et 2 ne correspondent pas
+        t2vec_=t2vec_+t2vec #l'addition passe mais il reste a transposer
+        output=self.fc1(torch.cat((x,t2vec_.transpose(0,1)), dim=2)) #on cat sur n
+        print('---------output.shape----------', output.shape)
         return(output)
                     
         

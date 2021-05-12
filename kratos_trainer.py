@@ -14,10 +14,7 @@ def main(name,nlimit,device='cpu'):
     train_set=register_training_signal(nlimit).transpose() #[time_step]x[dim] > [dim]x[time_step]
     test_set=read_signal(test_path).transpose()
     test_set=normalize_data(test_set[:nlimit+1,:])
-    print(test_set.shape)
-    print(train_set.shape)
-
-
+    # test_set/train_set : [n_signal][Tstep]
     
     path='./data/{}'.format(name)
 
@@ -26,6 +23,7 @@ def main(name,nlimit,device='cpu'):
     np.savetxt('./data/{}/data_train_set.txt'.format(name), train_set)
     np.savetxt('./data/{}/data_test_set.txt'.format(name), test_set)
     
+
     backast_length=80
     forecast_length=80
     ninterval=backast_length//20
@@ -47,11 +45,11 @@ def main(name,nlimit,device='cpu'):
     nhead=4
     dropout=0.2
     
-    epochs=50
-    bsz=256
-    eval_bsz=256
-    
-    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length, dropout=dropout, device=device)
+    epochs=200
+    bsz=128
+    eval_bsz=128
+   
+    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length,dropout=dropout, device=device)
     
     print("Model structure: ", model, "\n\n")
     for layer_name, param in model.named_parameters():

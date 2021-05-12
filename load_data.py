@@ -28,6 +28,7 @@ def get_data2(backast_length, forecast_length, n_interval, train_set, test_set) 
 
     length=forecast_length+backast_length
 
+    
     for i in tqdm(range(0,ntrain-length-n_interval*10,backast_length)) :
         for gap in range(0,n_interval*10,10) :
             print(i,gap)
@@ -46,7 +47,6 @@ def get_data2(backast_length, forecast_length, n_interval, train_set, test_set) 
             ytest = np.vstack((ytest, time_series_cleaned_fortraining_y))
 
     xtrain,ytrain=shuffle_in_unison(xtrain, ytrain)
-
     xtest,ytest=shuffle_in_unison(xtest, ytest)
 
     xtrain=torch.tensor(xtrain,dtype=torch.float32)
@@ -63,7 +63,7 @@ def get_data2(backast_length, forecast_length, n_interval, train_set, test_set) 
     return xtrain, ytrain, xtest, ytest    
     
 def normalize_data(x):
-    "value will be btwm -0.5 and 0.5"
+    "value will be btwm 0 and 1"
     min=np.amin(x)
     max=np.amax(x)
 
