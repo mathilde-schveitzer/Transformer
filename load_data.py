@@ -28,6 +28,7 @@ def get_data2(backast_length, forecast_length, n_interval, train_set, test_set) 
 
     length=forecast_length+backast_length
 
+    
     for i in tqdm(range(0,ntrain-length-n_interval*10,backast_length)) :
         for gap in range(0,n_interval*10,10) :
             print(i,gap)
@@ -46,7 +47,6 @@ def get_data2(backast_length, forecast_length, n_interval, train_set, test_set) 
             ytest = np.vstack((ytest, time_series_cleaned_fortraining_y))
 
     xtrain,ytrain=shuffle_in_unison(xtrain, ytrain)
-
     xtest,ytest=shuffle_in_unison(xtest, ytest)
 
     xtrain=torch.tensor(xtrain,dtype=torch.float32)
@@ -83,10 +83,10 @@ def merge_data(a,b):
 
 
 def merge_line(a,b,k):
-            merge=np.zeros(a.shape[1]+b.shape[1])
-            merge[:a.shape[1]]=a[k,:]
-            merge[a.shape[1]:]=b[k,:]
-            return(merge)
+    merge=np.zeros(a.shape[1]+b.shape[1])
+    merge[:a.shape[1]]=a[k,:]
+    merge[a.shape[1]:]=b[k,:]
+    return(merge)
 
         
 def get_data_for_predict(backast_length, data_set) :
