@@ -28,7 +28,7 @@ def get_data2(backast_length, forecast_length, n_interval, train_set, test_set) 
 
     length=forecast_length+backast_length
 
-    for i in tqdm(range(0,ntrain-length-backast_length-n_interval*10,backast_length)) :
+    for i in tqdm(range(0,ntrain-length-n_interval*10,backast_length)) :
         for gap in range(0,n_interval*10,10) :
             print(i,gap)
             time_series_cleaned_fortraining_x=train_set[:,i+gap:i+gap+backast_length].reshape(1,dim,backast_length).swapaxes(1,2)
