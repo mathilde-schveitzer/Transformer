@@ -66,13 +66,14 @@ def main(name,nlimit,device='cpu'):
     print('| End of training | test loss {:5.2f} | train loss {:5.2f} | '.format(test_loss, train_loss))
     print('=' * 89)
 
-    data_set=get_data_for_predict(backast_length, train_set)
-    torch.save(data_set,'./data/{}/get_train_data_for_predict.pt'.format(name))
-    model.evaluate_whole_signal(data_set,bsz,name)
+    # Not working on this branch
+    # data_set=get_data_for_predict(backast_length, train_set)
+    # torch.save(data_set,'./data/{}/get_train_data_for_predict.pt'.format(name))
+    # model.evaluate_whole_signal(data_set,bsz,name)
 
-    data_test_set=get_data_for_predict(backast_length, test_set)
-    torch.save(data_test_set, './data/{}/get_test_data_for_predict.pt'.format(name))
-    model.evaluate_whole_signal(data_test_set,eval_bsz,name,train=False)
+    # data_test_set=get_data_for_predict(backast_length, test_set)
+    # torch.save(data_test_set, './data/{}/get_test_data_for_predict.pt'.format(name))
+    # model.evaluate_whole_signal(data_test_set,eval_bsz,name,train=False)
         
 
     print('---------- Name of the file : {} --------------'.format(name))
