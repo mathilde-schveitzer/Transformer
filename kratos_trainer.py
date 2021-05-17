@@ -16,13 +16,13 @@ def main(name,nlimit,device='cpu'):
     test_set=test_set[:nlimit+1,:]
    # train_set=np.expand_dims(train_set[-1,:],0) # comment if you want the [0,nlimit] signals
 
-    if test_set.shape[0]==1 :
-        test_set=normalize_data(test_set)
-        train_set=normalize_data(train_set)
+    # if test_set.shape[0]==1 :
+    #     test_set=normalize_data(test_set)
+    #     train_set=normalize_data(train_set)
 
-    else :
-        test_set=normalize_datas(test_set)
-        train_set=normalize_datas(train_set)
+    # else :
+    #     test_set=normalize_datas(test_set)
+    #     train_set=normalize_datas(train_set)
         
     print(test_set.shape)
     print(train_set.shape)
@@ -57,7 +57,7 @@ def main(name,nlimit,device='cpu'):
     nMLP=128
     nhead=4
     dropout=0.2
-    epochs=200
+    epochs=500
     bsz=128
     eval_bsz=128
    
