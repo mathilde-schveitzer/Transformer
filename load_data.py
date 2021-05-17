@@ -162,3 +162,8 @@ def shuffle_in_unison(a, b):
     np.random.set_state(rng_state)
     np.random.shuffle(b)
     return(a,b)
+
+def normalize_datas(data) :
+    for i in range(data.shape[0]) :
+        data[i,:]=normalize_data(data[i,:])
+    return(data)
