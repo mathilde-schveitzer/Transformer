@@ -82,6 +82,7 @@ class TransformerModel(nn.Module):
                 start_time = time.time()
                 total_loss=0
 
+
     def evaluate(self,xtest, ytest, bsz, val, name, predict=False):  
         self.eval() # Turn on the evaluation mode (herited from module)
 
@@ -117,7 +118,9 @@ class TransformerModel(nn.Module):
                 print('targets.shape',targets.shape)
                 print(output.shape)
                 output=output.transpose(0,1)
+                print(output)
                 prediction[batch_id*output.shape[0]:(batch_id+1)*output.shape[0],:,:]=output
+                
                 print(prediction)
         mean_loss=np.mean(test_loss)
 

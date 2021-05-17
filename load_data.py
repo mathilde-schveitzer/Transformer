@@ -83,10 +83,10 @@ def merge_data(a,b):
 
 
 def merge_line(a,b,k):
-            merge=np.zeros(a.shape[1]+b.shape[1])
-            merge[:a.shape[1]]=a[k,:]
-            merge[a.shape[1]:]=b[k,:]
-            return(merge)
+    merge=np.zeros(a.shape[1]+b.shape[1])
+    merge[:a.shape[1]]=a[k,:]
+    merge[a.shape[1]:]=b[k,:]
+    return(merge)
 
         
 def get_data_for_predict(backast_length, data_set) :
@@ -162,3 +162,8 @@ def shuffle_in_unison(a, b):
     np.random.set_state(rng_state)
     np.random.shuffle(b)
     return(a,b)
+
+def normalize_datas(data) :
+    for i in range(data.shape[0]) :
+        data[i,:]=normalize_data(data[i,:])
+    return(data)
