@@ -13,8 +13,12 @@ def main(name,nlimit,device='cpu'):
    
     train_set=register_training_signal(nlimit).transpose() #[time_step]x[dim] > [dim]x[time_step]
     test_set=read_signal(test_path).transpose()
-    test_set=normalize_data(test_set[:nlimit+1,:])
-    # test_set/train_set : [n_signal][Tstep]
+    test_set=normalize_data(test_set[nlimit:nlimit+1,:])
+    train_set=np.expand_dims(train_set[-1,:],0) # comment if you want the [0,nlimit] signals
+    print(test_set.shape)
+    print(train_set.shape)
+
+
     
     path='./data/{}'.format(name)
 
@@ -33,6 +37,7 @@ def main(name,nlimit,device='cpu'):
     torch.save(xtrain,'./data/{}/xtrain.pt'.format(name))
     torch.save(ytrain,'./data/{}/ytrain.pt'.format(name))
     torch.save(ytest,'./data/{}/ytest.pt'.format(name))
+
     torch.save(xtest,'./data/{}/xtest.pt'.format(name))
 
 
@@ -44,12 +49,11 @@ def main(name,nlimit,device='cpu'):
     nMLP=128
     nhead=4
     dropout=0.2
-    
     epochs=200
     bsz=128
     eval_bsz=128
    
-    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length,dropout=dropout, device=device)
+    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length, dropout=dropout, device=device)
     
     print("Model structure: ", model, "\n\n")
     for layer_name, param in model.named_parameters():
@@ -63,6 +67,7 @@ def main(name,nlimit,device='cpu'):
     print('| End of training | test loss {:5.2f} | train loss {:5.2f} | '.format(test_loss, train_loss))
     print('=' * 89)
 
+    # Not working on this branch :
     # data_set=get_data_for_predict(backast_length, train_set)
     # torch.save(data_set,'./data/{}/get_train_data_for_predict.pt'.format(name))
     # model.evaluate_whole_signal(data_set,bsz,name)
