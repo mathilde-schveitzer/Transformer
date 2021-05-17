@@ -14,7 +14,7 @@ def main(name,nlimit,device='cpu'):
     train_set=register_training_signal(nlimit).transpose() #[time_step]x[dim] > [dim]x[time_step]
     test_set=read_signal(test_path).transpose()
     test_set=normalize_data(test_set[nlimit:nlimit+1,:])
-    train_set=np.expand_dims(train_set[-1,:],0)
+    train_set=np.expand_dims(train_set[-1,:],0) # comment if you want the [0,nlimit] signals
     print(test_set.shape)
     print(train_set.shape)
 
@@ -66,13 +66,13 @@ def main(name,nlimit,device='cpu'):
     print('| End of training | test loss {:5.2f} | train loss {:5.2f} | '.format(test_loss, train_loss))
     print('=' * 89)
 
-    # data_set=get_data_for_predict(backast_length, train_set)
-    # torch.save(data_set,'./data/{}/get_train_data_for_predict.pt'.format(name))
-    # model.evaluate_whole_signal(data_set,bsz,name)
+    data_set=get_data_for_predict(backast_length, train_set)
+    torch.save(data_set,'./data/{}/get_train_data_for_predict.pt'.format(name))
+    model.evaluate_whole_signal(data_set,bsz,name)
 
-    # data_test_set=get_data_for_predict(backast_length, test_set)
-    # torch.save(data_test_set, './data/{}/get_test_data_for_predict.pt'.format(name))
-    # model.evaluate_whole_signal(data_test_set,eval_bsz,name,train=False)
+    data_test_set=get_data_for_predict(backast_length, test_set)
+    torch.save(data_test_set, './data/{}/get_test_data_for_predict.pt'.format(name))
+    model.evaluate_whole_signal(data_test_set,eval_bsz,name,train=False)
         
 
     print('---------- Name of the file : {} --------------'.format(name))
