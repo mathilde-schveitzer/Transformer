@@ -154,7 +154,6 @@ def register_training_signal(nlimit) :
         else :
             time_series=read_signal(filename)
             x=np.vstack((x,time_series[:,:nlimit+1]))
-    x=normalize_data(x)
     return(x)
         
 def shuffle_in_unison(a, b):
