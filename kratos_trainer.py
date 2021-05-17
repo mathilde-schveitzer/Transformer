@@ -14,7 +14,7 @@ def main(name,nlimit,device='cpu'):
     train_set=register_training_signal(nlimit).transpose() #[time_step]x[dim] > [dim]x[time_step]
     test_set=read_signal(test_path).transpose()
     test_set=normalize_data(test_set[nlimit:nlimit+1,:])
-    train_set=np.expand_dims(train_set[-1,:],0) # comment if you want the [0,nlimit] signals
+    train_set=normalize_data(np.expand_dims(train_set[-1,:],0)) # comment if you want the [0,nlimit] signals
     print(test_set.shape)
     print(train_set.shape)
 
