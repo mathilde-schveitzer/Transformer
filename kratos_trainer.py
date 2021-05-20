@@ -4,7 +4,7 @@ import torch.nn as nn
 import time
 import argparse
 from load_data import *
-from model import *
+from nbeats import *
 import os
 
 def main(name,nlimit,device='cpu'):
@@ -13,12 +13,12 @@ def main(name,nlimit,device='cpu'):
    
     train_set=register_training_signal(nlimit).transpose() #[time_step]x[dim] > [dim]x[time_step]
     test_set=read_signal(test_path).transpose()
-    test_set=test_set[:nlimit+1,:]
-   # train_set=np.expand_dims(train_set[-1,:],0) # comment if you want the [0,nlimit] signals
+    test_set=test_set[nlimit:nlimit+1,:]
+    train_set=np.expand_dims(train_set[-1,:],0) # comment if you want the [0,nlimit] signals
 
     # if test_set.shape[0]==1 :
-    #     test_set=normalize_data(test_set)
-    #     train_set=normalize_data(train_set)
+    #      test_set=normalize_data(test_set)
+    #      train_set=normalize_data(train_set)
 
     # else :
     #     test_set=normalize_datas(test_set)
@@ -57,23 +57,25 @@ def main(name,nlimit,device='cpu'):
     nMLP=128
     nhead=4
     dropout=0.2
-    epochs=500
+    epochs=100
     bsz=128
     eval_bsz=128
    
-    model=TransformerModel(ninp, nhead, nhid, nlayers, nMLP, backast_length, forecast_length, pos_encod=False, dropout=dropout, device=device)
+    model=NBeatsNet(device=device, forecast_length=forecast_length, backcast_length=backast_length)
     
     print("Model structure: ", model, "\n\n")
     for layer_name, param in model.named_parameters():
         print(f"Layer: {layer_name} | Size: {param.size()} \n")
 
-
-    model.fit(xtrain, ytrain, xtest, ytest, bsz, eval_bsz, epochs, name)
-    test_loss = model.evaluate(xtest, ytest, eval_bsz, True, name, predict=True)
-    train_loss = model.evaluate(xtrain, ytrain, bsz, False, name, predict=True)
+    start_time=time.time()
+    model.fit(xtrain, ytrain, xtest, ytest, name, epochs=epochs, batch_size=bsz)
+    elapsed_time=time.time()-start_time
+    test_loss = model.evaluate(xtest, ytest, eval_bsz, name, False, save=True)
+    train_loss = model.evaluate(xtrain, ytrain, bsz, name, True, save=True)
     print('=' * 89)
     print('| End of training | test loss {:5.2f} | train loss {:5.2f} | '.format(test_loss, train_loss))
     print('=' * 89)
+    print('| DL Session took {} seconds |'.format(elapsed_time))
 
     # Not working on this branch
     # data_set=get_data_for_predict(backast_length, train_set)

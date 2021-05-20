@@ -1,4 +1,4 @@
-import sys
+
 import os
 import numpy as np
 import math
@@ -18,7 +18,7 @@ class TransformerModel(nn.Module):
         self.embed_dims=ninp*nhead
         self.device = device
         encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout, activation='gelu')
-        self.encoder=MLP(ninp, self.embed_dims, device=device)
+        self.encoder=nn.Linear(ninp, self.embed_dims)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)       
         self.pos_encod=pos_encod
         if pos_encod :
@@ -38,12 +38,9 @@ class TransformerModel(nn.Module):
 
     def forward(self, input):
         input=input.to(self.device)
-        
+        print(input)
         input = self.encoder(input)
 
-        if self.pos_encod :
-            input=self.pos_encoder(input)
-        
         output = self.transformer_encoder(input)
 
         _output = self.decoder(output)
@@ -162,12 +159,6 @@ class TransformerModel(nn.Module):
                 arr = arr[size:]
             arrays.append(arr)
             return arrays
-
-        if save :
-            torch.save(xtrain,'./data/{}/xtrain.pt'.format(filename))
-            torch.save(ytrain,'./data/{}/ytrain.pt'.format(filename))
-            torch.save(xtest,'./data/{}/xtest.pt'.format(filename))
-            torch.save(ytest,'./data/{}/ytest.pt'.format(filename))
             
         for epoch in range(1, epochs + 1):
             epoch_start_time = time.time()
@@ -182,73 +173,16 @@ class TransformerModel(nn.Module):
             store_loss[epoch-1]=train_loss
             store_val_loss[epoch-1]=val_loss
 
-       
-        np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
-        np.savetxt('./data/{}/val_loss.txt'.format(filename), store_val_loss)
-
-    def evaluate_whole_signal(self,data_set,bsz,name,train=True):  
-        self.eval() # Turn on the evaluation mode (herited from module)
-
-        def split(arr, size):
-            arrays = []
-            while len(arr) > size:
-                slice_ = arr[:size]
-                arrays.append(slice_)
-                arr = arr[size:]
-            arrays.append(arr)
-            return arrays
-       
-        data_set_list=split(data_set, bsz)           
-        prediction=torch.zeros_like(data_set)
-    
-        for batch_id in range(0, len(data_set_list)):
-       
-            data=data_set_list[batch_id].to(self.device)
-
-            data=data.transpose(0,1)
-            output=self(data)        
-            output=output.transpose(0,1)
-            prediction[batch_id*output.shape[0]:(batch_id+1)*output.shape[0],:,:]=output
-
-        if train : torch.save(prediction, './data/{}/predictions_whole_train_set.pt'.format(name))
-        else : torch.save(prediction, './data/{}/predictions_whole_test_set.pt'.format(name))
-
-class PositionalEncoding(nn.Module):
-
-    def __init__(self, d_model, device, dropout=0.1, max_len=5000):
-        super(PositionalEncoding, self).__init__()
-        self.dropout = nn.Dropout(p=dropout)
-
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0).transpose(0, 1)
-        self.register_buffer('pe', pe)
-        self.device=device
-        
-    def forward(self, x):
-        pencod=self.pe[:x.shape[0], :].to(self.device)
-        x = x + self.pe[:x.shape[0], :]
-        return x
+        if save :
+            np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
+            np.savetxt('./data/{}/val_loss.txt'.format(filename), store_val_loss)
 
 
-class MLP(nn.Module):
-    def __init__(self, input_size, output_size, device='cpu'):
-        super(MLP, self).__init__()
-        self.layers=nn.Linear(input_size, output_size)
-        self.device=device
-        self.to(device)
-        
-    def forward(self,x):
-        output=x
-        return(self.layers(output)) 
 
 class MLForecast(nn.Module) :
     def __init__(self, forecast_size, backast_size, device='cpu') :
         super(MLForecast, self).__init__()
-        self.MLP=MLP(backast_size, forecast_size, device)
+        self.MLP=nn.Linear(backast_size, forecast_size)
         self.to(device)
 
     def forward(self, x):
@@ -259,8 +193,8 @@ class MLForecast(nn.Module) :
 class Decoder(nn.Module) :
     def __init__(self, ninp, nout, forecast_size, backast_size, device='cpu') :
        super(Decoder, self).__init__()
-       self.MLP=MLP(ninp, nout, device)
-       self.MLF=MLP(backast_size,forecast_size, device)
+       self.MLP=nn.Linear(ninp, nout)
+       self.MLF=nn.Linear(backast_size,forecast_size)
        self.to(device)
 
     def forward(self,x,verbose=False):

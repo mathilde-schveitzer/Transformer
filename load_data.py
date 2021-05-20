@@ -48,18 +48,7 @@ def get_data2(backast_length, forecast_length, n_interval, train_set, test_set) 
 
     xtrain,ytrain=shuffle_in_unison(xtrain, ytrain)
     xtest,ytest=shuffle_in_unison(xtest, ytest)
-
-    xtrain=torch.tensor(xtrain,dtype=torch.float32)
-    ytrain=torch.tensor(ytrain,dtype=torch.float32)
-    xtest=torch.tensor(xtest,dtype=torch.float32)
-    ytest=torch.tensor(ytest, dtype=torch.float32)
-
-    
-    print('xtrainshape : ', xtrain.shape)
-    print('ytrainshape : ', ytrain.shape)
-    print('ytestshape : ', ytest.shape)
-    print('xtestshape : ', xtest.shape)
-                                
+                            
     return xtrain, ytrain, xtest, ytest    
     
 def normalize_data(x):
@@ -167,3 +156,13 @@ def normalize_datas(data) :
     for i in range(data.shape[0]) :
         data[i,:]=normalize_data(data[i,:])
     return(data)
+
+
+def split(arr, size):
+    arrays = []
+    while len(arr) > size:
+        slice_ = arr[:size]
+        arrays.append(slice_)
+        arr = arr[size:]
+    arrays.append(arr)
+    return arrays
