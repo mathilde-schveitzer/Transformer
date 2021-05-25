@@ -15,7 +15,7 @@ class NBeatsNet(nn.Module):
 
     def __init__(self,
                  device=torch.device('cpu'),
-                 block_types=(SEASONALITY_BLOCK, SEASONALITY_BLOCK),
+                 block_types=(GENERIC_BLOCK, GENERIC_BLOCK),
                  forecast_length=5,
                  backcast_length=10,
                  thetas_dim=(4, 8),
@@ -43,7 +43,7 @@ class NBeatsNet(nn.Module):
         print('| Initialization . . . .')    
         self.parameters = nn.ParameterList(self.parameters)
         
-        self._opt = optim.Adam(self.parameters(),lr=1e-3)
+        self._opt = optim.Adam(self.parameters(),lr=1e-4)
         self._loss =F.l1_loss
         self.to(self.device)
         
@@ -154,8 +154,6 @@ class NBeatsNet(nn.Module):
             b, f = self.stack[block_id](backcast)
             backcast = backcast.to(self.device) - b.unsqueeze(-1)
             forecast = forecast.to(self.device) + f.unsqueeze(-1)
-            print(backcast.shape)
-            print(forecast.shape)
         return backcast, forecast
 
 
@@ -192,13 +190,11 @@ class Block(nn.Module):
         self.backcast_length = backcast_length
         self.forecast_length = forecast_length
         self.block_type=block_type
-        print(block_type)
-        print(self.block_type)
         if self.block_type=='fully_connected' :
             self.TFC=None
             self.fc = nn.Sequential(nn.Linear(backcast_length, units), nn.Linear(units, units), nn.Linear(units, units), nn.Linear(units, units))
         else :
-            self.TFC = TransformerModel(ninp=1,nhead=4, nhid=128, nlayers=1, nMLP=258, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
+            self.TFC = TransformerModel(ninp=1,nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
             self.fc=nn.Linear(backcast_length, units)
         self.device = device
         self.backcast_linspace, self.forecast_linspace = linear_space(backcast_length, forecast_length)
@@ -214,13 +210,13 @@ class Block(nn.Module):
 
         else :
             x = x.transpose(0,1)
-            print(x.shape)
+            
 
             y = self.TFC(x.to(self.device))
             y=y.transpose(0,1)
             y=y.squeeze(-1) #remove last dim : seasonality input must be [bsz][length]
             output=F.relu(self.fc(y)) # x=[128][units]
-            print('----------out of Transformer-----------')
+            
         return output
 
     def __str__(self):
@@ -244,7 +240,7 @@ class SeasonalityBlock(Block):
         # x= [128][80]
         backcast = seasonality_model(self.theta_b_fc(x), self.backcast_linspace, self.device)
         forecast = seasonality_model(self.theta_f_fc(x), self.forecast_linspace, self.device)
-        print('-----------backcast.shape---------', backcast.shape)
+        
         return backcast, forecast
 
 
@@ -263,8 +259,8 @@ class TrendBlock(Block):
 
 class GenericBlock(Block):
 
-    def __init__(self, units, thetas_dim, device, backcast_length=10, forecast_length=5, nb_harmonics=None):
-        super(GenericBlock, self).__init__(units, thetas_dim, device, backcast_length, forecast_length)
+    def __init__(self, units, thetas_dim, device, backcast_length=10, forecast_length=5, block_type='fully_connected', nb_harmonics=None):
+        super(GenericBlock, self).__init__(units, thetas_dim, device, backcast_length, forecast_length, block_type)
 
         self.backcast_fc = nn.Linear(thetas_dim, backcast_length)
         self.forecast_fc = nn.Linear(thetas_dim, forecast_length)

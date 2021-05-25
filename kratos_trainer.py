@@ -39,7 +39,7 @@ def main(name,nlimit,device='cpu'):
 
     backast_length=80
     forecast_length=80
-    ninterval=backast_length//20
+    ninterval=backast_length//10
     
     xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, ninterval, train_set, test_set)
     print('we got the data : xtrain.shape :', xtrain.shape)
@@ -51,13 +51,8 @@ def main(name,nlimit,device='cpu'):
 
     
     #Initiate an instance :
-    ninp=xtrain.shape[-1]
-    nhid=256
-    nlayers=2
-    nMLP=128
-    nhead=4
-    dropout=0.2
-    epochs=200
+    
+    epochs=1000
     bsz=128
     eval_bsz=128
    
