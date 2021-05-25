@@ -57,7 +57,7 @@ def main(name,nlimit,device='cpu'):
     nMLP=128
     nhead=4
     dropout=0.2
-    epochs=100
+    epochs=200
     bsz=128
     eval_bsz=128
    

@@ -37,7 +37,7 @@ class NBeatsNet(nn.Module):
 
         for block_id in range(len(self.block_types)):
             block_init = NBeatsNet.select_block(self.block_types[block_id])
-            block = block_init(self.hidden_layer_units, self.thetas_dim[block_id], self.device, self.backcast_length, self.forecast_length, block_type='fully_connected', nb_harmonics=self.nb_harmonics) #--> initialise your block in accordance with the type you've chosen just before
+            block = block_init(self.hidden_layer_units, self.thetas_dim[block_id], self.device, self.backcast_length, self.forecast_length, block_type='Tr', nb_harmonics=self.nb_harmonics) #--> initialise your block in accordance with the type you've chosen just before
             self.parameters.extend(block.parameters())
             self.stack.append(block)
         print('| Initialization . . . .')    
