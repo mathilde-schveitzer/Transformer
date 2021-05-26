@@ -101,13 +101,12 @@ class NBeatsNet(nn.Module):
             loss.backward()
             self._opt.step()
 
-            print('-------- total loss :', loss.item())
-            log_interval = 1
+            log_interval = 50
             
-            if k % log_interval == 50 :
+            if k % log_interval == 0 :
                 cur_loss = total_loss / log_interval
                 elapsed_time=time.time()-start_time
-                print(' {:5d}/{:5d} batches | ms/btach {:5.2f} | ''loss {:5.2f}'.format(batch_id, len(xtrain), elapsed* 1000 / log_interval, cur_loss))
+                print(' {:5d}/{:5d} batches | ms/batch {:5.2f} | ''loss {:5.2f}'.format(k, len(xtrain), elapsed_time* 1000 / log_interval, cur_loss))
                 start_time=time.time()
                 total_loss=0
 
@@ -210,8 +209,6 @@ class Block(nn.Module):
 
         else :
             x = x.transpose(0,1)
-            
-
             y = self.TFC(x.to(self.device))
             y=y.transpose(0,1)
             y=y.squeeze(-1) #remove last dim : seasonality input must be [bsz][length]
