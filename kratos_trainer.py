@@ -15,7 +15,6 @@ def main(name,device='cpu'):
 
     xtrain, ytrain, xtest, ytest = get_all_data(backcast_length, forecast_length, ninterval, name)
 
-
     print('we got the data : xtrain.shape :', xtrain.shape)
     print(ytrain.shape)
     print(xtest.shape)
@@ -26,20 +25,10 @@ def main(name,device='cpu'):
     torch.save(ytest,'./data/{}/ytest.pt'.format(name))
     torch.save(xtest,'./data/{}/xtest.pt'.format(name))
 
-    sys.exit()
-
-    
-
-
     
     #Initiate an instance :
-    ninp=xtrain.shape[-1]
-    nhid=64
-    nlayers=2
-    nMLP=128
-    nhead=4
-    dropout=0.2
-    epochs=5000
+    
+    epochs=1000
     bsz=128
     eval_bsz=128
    

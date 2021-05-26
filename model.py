@@ -10,18 +10,16 @@ import load_data as ld
 
 class TransformerModel(nn.Module):
 
-    def __init__(self, ninp, nhead, nhid, nlayers, nMLP, backast_size, forecast_size, pos_encod=False, dropout=0.5, device=torch.device('cpu')):
+    def __init__(self, ninp, nhead, nhid, nlayers, backast_size, forecast_size, dropout=0.5, device=torch.device('cpu')):
         super(TransformerModel, self).__init__()
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
         self.model_type = 'Transformer'
         self.embed_dims=ninp*nhead
         self.device = device
         encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout, activation='gelu')
+
         self.encoder=nn.Linear(ninp, self.embed_dims)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)       
-        self.pos_encod=pos_encod
-        if pos_encod :
-            self.pos_encoder=PositionalEncoding(self.embed_dims,device, dropout=dropout)
         self.decoder=Decoder(self.embed_dims, ninp, forecast_size,backast_size,device=device)
 
 
@@ -37,7 +35,7 @@ class TransformerModel(nn.Module):
 
     def forward(self, input):
         input=input.to(self.device)
-        print(input)
+        
         input = self.encoder(input)
 
         output = self.transformer_encoder(input)
@@ -74,8 +72,6 @@ class TransformerModel(nn.Module):
             print('----------- total loss :', loss.item())
             log_interval = 1
             if k % log_interval == 50 : # donc tous les "log_interval" batchs
-                print(targets)
-                print(output)
                 cur_loss = total_loss / log_interval
                 elapsed = time.time() - start_time
                 print(' {:5d}/{:5d} batches | ms/batch {:5.2f} | ''loss {:5.2f}' .format(batch_id, len(xtrain),elapsed * 1000 / log_interval,cur_loss))
@@ -108,7 +104,7 @@ class TransformerModel(nn.Module):
        
         if predict :
             prediction=torch.zeros_like(ytest)
-            print('prediction.shape', prediction.shape)
+            
         test_loss = []
         
         for batch_id in range(0, len(xtest_list)):
@@ -122,10 +118,10 @@ class TransformerModel(nn.Module):
 
             if predict :
                 #d'ou l'importance de passer les batch dans l'ordre
-                print('targets.shape',targets.shape)
-                print(output.shape)
+                
+                
                 output=output.transpose(0,1)
-                print(output)
+                
                 prediction[batch_id*output.shape[0]:(batch_id+1)*output.shape[0],:,:]=output
                 
                 print(prediction)
