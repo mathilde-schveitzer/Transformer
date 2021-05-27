@@ -7,7 +7,7 @@ from nbeats import *
 def main(name,storage,device='cpu'):
 
     # you dont need to create a directory for name since it has already been done
-    storage_path='./data/{}'.format(name)
+    storage_path='./data/{}'.format(storage)
     
     if not os.path.exists(storage_path) :
         os.makedirs(storage_path)
