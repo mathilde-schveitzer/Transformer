@@ -1,8 +1,10 @@
+import sys
 import csv
 from tqdm import tqdm
 import numpy as np
 import torch
 import glob
+import os
 
 def get_data2(backast_length, forecast_length, n_interval, train_set, test_set) :
 
@@ -31,7 +33,6 @@ def get_data2(backast_length, forecast_length, n_interval, train_set, test_set) 
     
     for i in tqdm(range(0,ntrain-length-n_interval*10,backast_length)) :
         for gap in range(0,n_interval*10,10) :
-            print(i,gap)
             time_series_cleaned_fortraining_x=train_set[:,i+gap:i+gap+backast_length].reshape(1,dim,backast_length).swapaxes(1,2)
             time_series_cleaned_fortraining_y=train_set[:,(i+gap+backast_length):(i+gap+backast_length+forecast_length)].reshape(1,dim,forecast_length).swapaxes(1,2)
 
@@ -50,7 +51,46 @@ def get_data2(backast_length, forecast_length, n_interval, train_set, test_set) 
     xtest,ytest=shuffle_in_unison(xtest, ytest)
                             
     return xtrain, ytrain, xtest, ytest    
+
+
+def get_all_data(backcast_length, forecast_length, ninterval, name) :
+
+    storage_path='./data/{}'.format(name)
+    if not os.path.exists(storage_path) :
+        os.makedirs(storage_path)
     
+    path='nbeats_f100/train/SAT2_10_minutes_future100_*.csv'
+    files=glob.glob(path)
+    x=np.empty
+    for k,filename in enumerate(files):
+        if k==0 :
+            time_series=read_signal(filename)
+            x=time_series
+        else :
+            time_series=read_signal(filename)
+            x=np.vstack((x,time_series))
+
+    train_set=x.transpose()  #[time_step]x[dim] > [dim]x[time_step]
+    test_set=read_signal('nbeats_f100/test/SAT2_10_minutes_future100_4.csv').transpose()
+
+    train_set=train_set.reshape(-1)
+    test_set=test_set.reshape(-1)
+
+    train_set=np.expand_dims(train_set, 0)
+    test_set=np.expand_dims(test_set, 0)
+
+    print(train_set.shape)
+    print(test_set.shape)
+    # test_set=normalize_data(test_set)
+    # train_set=normalize_data(train_set)
+    
+    np.savetxt('./data/{}/data_train_set.txt'.format(name), train_set)
+    np.savetxt('./data/{}/data_test_set.txt'.format(name), test_set)
+    
+    xtrain, ytrain, xtest, ytest = get_data2(backcast_length, forecast_length, ninterval, train_set, test_set)
+
+    return xtrain, ytrain, xtest, ytest
+
 def normalize_data(x):
     "value will be btwm 0 and 1"
     min=np.amin(x)

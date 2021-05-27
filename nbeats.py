@@ -44,7 +44,7 @@ class NBeatsNet(nn.Module):
         print('| Initialization . . . .')    
         self.parameters = nn.ParameterList(self.parameters)
         
-        self._opt = optim.Adam(self.parameters(),lr=1e-5)
+        self._opt = optim.Adam(self.parameters(),lr=1e-4)
         self._loss =F.l1_loss
         self.to(self.device)
         
@@ -104,9 +104,8 @@ class NBeatsNet(nn.Module):
             total_loss+=loss.item()
             loss.backward()
             self._opt.step()
-
            
-            log_interval = 10
+            log_interval = 50
             
             if k % log_interval == 0 :
                 if k==0 :
@@ -220,6 +219,7 @@ class Block(nn.Module):
             output = F.relu(self.fc(x.to(self.device)))
         else :
             x = x.transpose(0,1)
+
             output = self.TFC(x.to(self.device))
             #output=y.transpose(0,1)
             # y=y.squeeze(-1) #remove last dim : seasonality input must be [bsz][length]

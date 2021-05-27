@@ -7,6 +7,7 @@ from load_data import *
 from nbeats import *
 import os
 
+
 def main(name,nlimit,device='cpu'):
     
     test_path='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'
@@ -27,27 +28,21 @@ def main(name,nlimit,device='cpu'):
     print(test_set.shape)
     print(train_set.shape)
 
-
-    
-    path='./data/{}'.format(name)
-
-    if not os.path.exists(path) :
-        os.makedirs(path)
-    np.savetxt('./data/{}/data_train_set.txt'.format(name), train_set)
-    np.savetxt('./data/{}/data_test_set.txt'.format(name), test_set)
-    
-
-    backast_length=80
+    backcast_length=80
     forecast_length=80
-    ninterval=backast_length//10
-    
-    xtrain,ytrain,xtest,ytest=get_data2(backast_length, forecast_length, ninterval, train_set, test_set)
+    ninterval=backcast_length//10
+
+    xtrain, ytrain, xtest, ytest = get_all_data(backcast_length, forecast_length, ninterval, name)
+
     print('we got the data : xtrain.shape :', xtrain.shape)
+    print(ytrain.shape)
+    print(xtest.shape)
+    print(ytest.shape)
+    
     torch.save(xtrain,'./data/{}/xtrain.pt'.format(name))
     torch.save(ytrain,'./data/{}/ytrain.pt'.format(name))
     torch.save(ytest,'./data/{}/ytest.pt'.format(name))
     torch.save(xtest,'./data/{}/xtest.pt'.format(name))
-
 
     
     #Initiate an instance :
@@ -70,8 +65,9 @@ def main(name,nlimit,device='cpu'):
     print('=' * 89)
     print('| End of training | test loss {:5.2f} | train loss {:5.2f} | '.format(test_loss, train_loss))
     print('=' * 89)
-    print('| DL Session took {} seconds |'.format(elapsed_time))
-        
+
+    print('| DL Session took {} seconds |'.format(elapsed_time))    
+
 
     print('---------- Name of the file : {} --------------'.format(name))
 
@@ -80,10 +76,9 @@ def main(name,nlimit,device='cpu'):
 if __name__ == '__main__':
    parser=argparse.ArgumentParser()
    parser.add_argument('name', help='The name of the folder in which out data will be saved')
-   parser.add_argument('identifiant', help='Name of the signal you will create')
    parser.add_argument('-device', help='Processor used for torch')
    args=parser.parse_args()
    if args.device :
-       main(args.name,int(args.identifiant), device=args.device)
+       main(args.name, device=args.device)
    else :
-       main(args.name,int(args.identifiant))
+       main(args.name)
