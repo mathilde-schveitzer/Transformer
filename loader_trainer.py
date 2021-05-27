@@ -15,8 +15,8 @@ def main(name,storage,device='cpu'):
     epochs=500
     bsz=256
     eval_bsz=256
-    backcast_length=80 #do not change until you load an other set of data
-    forecast_length=80
+    backcast_length=100 #do not change until you load an other set of data
+    forecast_length=100
     
     model=NBeatsNet(device=device, forecast_length=forecast_length, backcast_length=backcast_length)
     

@@ -44,7 +44,7 @@ class NBeatsNet(nn.Module):
         print('| Initialization . . . .')    
         self.parameters = nn.ParameterList(self.parameters)
         
-        self._opt = optim.Adam(self.parameters(),lr=1e-4)
+        self._opt = optim.Adam(self.parameters(),lr=1e-5)
         self._loss =F.l1_loss
         self.to(self.device)
         
