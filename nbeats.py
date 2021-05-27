@@ -201,17 +201,12 @@ class Block(nn.Module):
             self.fc = nn.Sequential(nn.Linear(backcast_length, units), nn.Linear(units, units), nn.Linear(units, units), nn.Linear(units, units))
         else :
             self.TFC = TransformerModel(ninp=1,nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
-            self.fc=None
+            self.fc= nn.Linear(backcast_length, units)
         self.device = device
         self.backcast_linspace, self.forecast_linspace = linear_space(backcast_length, forecast_length)
-        if self.block_type=='fully_connected' :
-            self.theta_b_fc = nn.Linear(units, thetas_dim, bias=False)
-            self.theta_f_fc = nn.Linear(units, thetas_dim, bias=False)
-        else :
-            self.trans_b_fc= TransformerModel(ninp=1, nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
-            self.trans_f_fc= TransformerModel(ninp=1, nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
-            self.theta_b_fc = nn.Sequential(nn.Linear(backcast_length, units), nn.Linear(units, thetas_dim, bias=False))
-            self.theta_f_fc = nn.Sequential(nn.Linear(forecast_length, units), nn.Linear(units, thetas_dim, bias=False))
+
+        self.theta_b_fc = nn.Linear(units, thetas_dim, bias=False)
+        self.theta_f_fc = nn.Linear(units, thetas_dim, bias=False)
 
     def forward(self, x):
         if self.block_type=='fully_connected' :
@@ -219,12 +214,10 @@ class Block(nn.Module):
             output = F.relu(self.fc(x.to(self.device)))
         else :
             x = x.transpose(0,1)
-
-            output = self.TFC(x.to(self.device))
-            #output=y.transpose(0,1)
-            # y=y.squeeze(-1) #remove last dim : seasonality input must be [bsz][length]
-            # output=F.relu(self.fc(y)) # x=[128][units]
-            
+            y = self.TFC(x.to(self.device))
+            output=y.transpose(0,1)
+            output=output.squeeze(-1) #remove last dim : seasonality input must be [bsz][length]
+            output=F.relu(self.fc(output)) # x=[128][units]
         return output
 
     def __str__(self):
@@ -277,22 +270,8 @@ class GenericBlock(Block):
         # no constraint for generic arch.
         x = super(GenericBlock, self).forward(x)
 
-        if self.block_type == 'fully_connected' :
-            theta_b = F.relu(self.theta_b_fc(x))
-            theta_f = F.relu(self.theta_f_fc(x))
-        else :
-            trans_b = self.trans_b_fc(x) # pas besoin de transposer ici, on sort du precedent transformer
-            trans_f = self.trans_f_fc(x)
-
-            trans_b = trans_b.transpose(0,1)
-            trans_f = trans_f.transpose(0,1)
-        
-            trans_b = trans_b.squeeze(-1)
-            trans_f = trans_f.squeeze(-1)
-            
-            theta_b = F.relu(self.theta_b_fc(trans_b))
-            theta_f = F.relu(self.theta_f_fc(trans_f))
-
+        theta_b = F.relu(self.theta_b_fc(x))
+        theta_f = F.relu(self.theta_f_fc(x))
         backcast = self.backcast_fc(theta_b)  # generic. 3.3.
         forecast = self.forecast_fc(theta_f)  # generic. 3.3.
 
