@@ -1,9 +1,16 @@
+import os
 import time
 import argparse
 import torch
 from nbeats import *
 
 def main(name,storage,device='cpu'):
+
+    # you dont need to create a directory for name since it has already been done
+    storage_path='./data/{}'.format(name)
+    
+    if not os.path.exists(storage_path) :
+        os.makedirs(storage_path)
 
     xtrain=torch.load('./data/{}/xtrain.pt'.format(name))
     ytrain=torch.load('./data/{}/ytrain.pt'.format(name))

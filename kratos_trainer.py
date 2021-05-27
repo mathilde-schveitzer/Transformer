@@ -10,8 +10,7 @@ import os
 
 def main(name,nlimit,device='cpu'):
     
-    test_path='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'
-   
+    test_path='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'   
     train_set=register_training_signal(nlimit).transpose() #[time_step]x[dim] > [dim]x[time_step]
     test_set=read_signal(test_path).transpose()
     test_set=test_set[nlimit:nlimit+1,:]
