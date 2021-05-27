@@ -1,3 +1,4 @@
+import sys
 import random
 import time
 import matplotlib.pyplot as plt
@@ -18,7 +19,7 @@ class NBeatsNet(nn.Module):
                  block_types=(GENERIC_BLOCK, GENERIC_BLOCK),
                  forecast_length=5,
                  backcast_length=10,
-                 thetas_dim=(4, 8),
+                 thetas_dim=(12, 12),
                  hidden_layer_units=256,
                  nb_harmonics=None):
         
@@ -43,7 +44,7 @@ class NBeatsNet(nn.Module):
         print('| Initialization . . . .')    
         self.parameters = nn.ParameterList(self.parameters)
         
-        self._opt = optim.Adam(self.parameters(),lr=1e-4)
+        self._opt = optim.Adam(self.parameters(),lr=1e-5)
         self._loss =F.l1_loss
         self.to(self.device)
         
@@ -67,6 +68,9 @@ class NBeatsNet(nn.Module):
         y_test_list =split(y_test, batch_size)
         
         for epoch in range(1,epochs+1):
+            log_epoch=50
+            if epoch % log_epoch == 0 :
+                print('|---------------- Epoch noumero {} ----------|'.format(epoch))
             epoch_start_time=time.time()
             self.do_training(x_train_list, y_train_list)
             elapsed_time=time.time()-epoch_start_time
@@ -100,14 +104,16 @@ class NBeatsNet(nn.Module):
             total_loss+=loss.item()
             loss.backward()
             self._opt.step()
-
-            print('-------- total loss :', loss.item())
-            log_interval = 1
+           
+            log_interval = 50
             
-            if k % log_interval == 50 :
-                cur_loss = total_loss / log_interval
+            if k % log_interval == 0 :
+                if k==0 :
+                    cur_loss=total_loss
+                else :
+                    cur_loss = total_loss / log_interval
                 elapsed_time=time.time()-start_time
-                print(' {:5d}/{:5d} batches | ms/btach {:5.2f} | ''loss {:5.2f}'.format(batch_id, len(xtrain), elapsed* 1000 / log_interval, cur_loss))
+                print(' {:5d}/{:5d} batches | ms/btach {:5.2f} | ''loss {:5.2f}'.format(k, len(xtrain), elapsed_time* 1000 / log_interval, cur_loss))
                 start_time=time.time()
                 total_loss=0
 
@@ -195,27 +201,29 @@ class Block(nn.Module):
             self.fc = nn.Sequential(nn.Linear(backcast_length, units), nn.Linear(units, units), nn.Linear(units, units), nn.Linear(units, units))
         else :
             self.TFC = TransformerModel(ninp=1,nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
-            self.fc=nn.Linear(backcast_length, units)
+            self.fc=None
         self.device = device
         self.backcast_linspace, self.forecast_linspace = linear_space(backcast_length, forecast_length)
-        self.theta_b_fc = nn.Linear(units, thetas_dim, bias=False)
-        self.theta_f_fc = nn.Linear(units, thetas_dim, bias=False)
+        if self.block_type=='fully_connected' :
+            self.theta_b_fc = nn.Linear(units, thetas_dim, bias=False)
+            self.theta_f_fc = nn.Linear(units, thetas_dim, bias=False)
+        else :
+            self.trans_b_fc= TransformerModel(ninp=1, nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
+            self.trans_f_fc= TransformerModel(ninp=1, nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
+            self.theta_b_fc = nn.Sequential(nn.Linear(backcast_length, units), nn.Linear(units, thetas_dim, bias=False))
+            self.theta_f_fc = nn.Sequential(nn.Linear(forecast_length, units), nn.Linear(units, thetas_dim, bias=False))
 
     def forward(self, x):
         if self.block_type=='fully_connected' :
             x=x.squeeze(-1) #remove last dim (=1)
-           
             output = F.relu(self.fc(x.to(self.device)))
-
-
         else :
             x = x.transpose(0,1)
-            
 
-            y = self.TFC(x.to(self.device))
-            y=y.transpose(0,1)
-            y=y.squeeze(-1) #remove last dim : seasonality input must be [bsz][length]
-            output=F.relu(self.fc(y)) # x=[128][units]
+            output = self.TFC(x.to(self.device))
+            #output=y.transpose(0,1)
+            # y=y.squeeze(-1) #remove last dim : seasonality input must be [bsz][length]
+            # output=F.relu(self.fc(y)) # x=[128][units]
             
         return output
 
@@ -269,8 +277,21 @@ class GenericBlock(Block):
         # no constraint for generic arch.
         x = super(GenericBlock, self).forward(x)
 
-        theta_b = F.relu(self.theta_b_fc(x))
-        theta_f = F.relu(self.theta_f_fc(x))
+        if self.block_type == 'fully_connected' :
+            theta_b = F.relu(self.theta_b_fc(x))
+            theta_f = F.relu(self.theta_f_fc(x))
+        else :
+            trans_b = self.trans_b_fc(x) # pas besoin de transposer ici, on sort du precedent transformer
+            trans_f = self.trans_f_fc(x)
+
+            trans_b = trans_b.transpose(0,1)
+            trans_f = trans_f.transpose(0,1)
+        
+            trans_b = trans_b.squeeze(-1)
+            trans_f = trans_f.squeeze(-1)
+            
+            theta_b = F.relu(self.theta_b_fc(trans_b))
+            theta_f = F.relu(self.theta_f_fc(trans_f))
 
         backcast = self.backcast_fc(theta_b)  # generic. 3.3.
         forecast = self.forecast_fc(theta_f)  # generic. 3.3.
