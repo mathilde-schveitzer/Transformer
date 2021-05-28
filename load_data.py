@@ -6,7 +6,7 @@ import torch
 import glob
 import os
 
-def get_data2(backast_length, forecast_length, n_interval, train_set, test_set) :
+def get_data2(backast_length, forecast_length, n_interval, train_set, test_set, gap=False) :
 
     
     assert len(train_set.shape)>1, 'please squeeze your data'
@@ -30,30 +30,46 @@ def get_data2(backast_length, forecast_length, n_interval, train_set, test_set) 
 
     length=forecast_length+backast_length
 
-    
-    for i in tqdm(range(0,ntrain-length-n_interval*10,backast_length)) :
-        for gap in range(0,n_interval*10,10) :
-            time_series_cleaned_fortraining_x=train_set[:,i+gap:i+gap+backast_length].reshape(1,dim,backast_length).swapaxes(1,2)
-            time_series_cleaned_fortraining_y=train_set[:,(i+gap+backast_length):(i+gap+backast_length+forecast_length)].reshape(1,dim,forecast_length).swapaxes(1,2)
+    if gap :
+        for i in tqdm(range(0,ntrain-length-n_interval*10,backast_length)) :
+            for gap in range(0,n_interval*10,10) :
+                time_series_cleaned_fortraining_x=train_set[:,i+gap:i+gap+backast_length].reshape(1,dim,backast_length).swapaxes(1,2)
+                time_series_cleaned_fortraining_y=train_set[:,(i+gap+backast_length):(i+gap+backast_length+forecast_length)].reshape(1,dim,forecast_length).swapaxes(1,2)
+
+                xtrain = np.vstack((xtrain, time_series_cleaned_fortraining_x))
+                ytrain = np.vstack((ytrain, time_series_cleaned_fortraining_y))
+
+        for k in tqdm(range(0,ntest-length-n_interval*10,backast_length)):
+            for gap in range(0,n_interval*10,10) : #multiplie par n_interval le nb de donnees utilisables
+                time_series_cleaned_fortesting_x=test_set[:,k+gap:k+gap+backast_length].reshape(1, dim, backast_length).swapaxes(1,2)
+                time_series_cleaned_fortesting_y=test_set[:,k+gap+backast_length:(k+gap+forecast_length+backast_length)].reshape(1, dim, forecast_length).swapaxes(1,2)
+
+                xtest = np.vstack((xtest, time_series_cleaned_fortesting_x))
+                ytest = np.vstack((ytest, time_series_cleaned_fortraining_y))
+    else :
+        for i in tqdm(range(0,ntrain-length,backast_length)) :
+            
+            time_series_cleaned_fortraining_x=train_set[:,i:i+backast_length].reshape(1,dim,backast_length).swapaxes(1,2)
+            time_series_cleaned_fortraining_y=train_set[:,(i+backast_length):(i+backast_length+forecast_length)].reshape(1,dim,forecast_length).swapaxes(1,2)
 
             xtrain = np.vstack((xtrain, time_series_cleaned_fortraining_x))
             ytrain = np.vstack((ytrain, time_series_cleaned_fortraining_y))
 
-    for k in tqdm(range(0,ntest-length-n_interval*10,backast_length)):
-        for gap in range(0,n_interval*10,10) : #multiplie par n_interval le nb de donnees utilisables
-            time_series_cleaned_fortesting_x=test_set[:,k+gap:k+gap+backast_length].reshape(1, dim, backast_length).swapaxes(1,2)
-            time_series_cleaned_fortesting_y=test_set[:,k+gap+backast_length:(k+gap+forecast_length+backast_length)].reshape(1, dim, forecast_length).swapaxes(1,2)
+        for k in tqdm(range(0,ntest-length,backast_length)):
+
+            time_series_cleaned_fortesting_x=test_set[:,k:k+backast_length].reshape(1, dim, backast_length).swapaxes(1,2)
+            time_series_cleaned_fortesting_y=test_set[:,k+backast_length:(k+forecast_length+backast_length)].reshape(1, dim, forecast_length).swapaxes(1,2)
 
             xtest = np.vstack((xtest, time_series_cleaned_fortesting_x))
             ytest = np.vstack((ytest, time_series_cleaned_fortraining_y))
-
+   
     xtrain,ytrain=shuffle_in_unison(xtrain, ytrain)
     xtest,ytest=shuffle_in_unison(xtest, ytest)
                             
     return xtrain, ytrain, xtest, ytest    
 
 
-def get_all_data(backcast_length, forecast_length, ninterval, name) :
+def get_all_data(backcast_length, forecast_length, ninterval, name, gap) :
 
     storage_path='./data/{}'.format(name)
     if not os.path.exists(storage_path) :
@@ -69,10 +85,15 @@ def get_all_data(backcast_length, forecast_length, ninterval, name) :
         else :
             time_series=read_signal(filename)
             x=np.vstack((x,time_series))
-
+    
+    
     train_set=x.transpose()  #[time_step]x[dim] > [dim]x[time_step]
     test_set=read_signal('nbeats_f100/test/SAT2_10_minutes_future100_4.csv').transpose()
 
+    for i in range(x.shape[1]):
+        train_set[i,:]=normalize_data(train_set[i,:])
+        test_set[i,:]=normalize_data(test_set[i,:])
+        
     train_set=train_set.reshape(-1)
     test_set=test_set.reshape(-1)
 
@@ -81,13 +102,11 @@ def get_all_data(backcast_length, forecast_length, ninterval, name) :
 
     print(train_set.shape)
     print(test_set.shape)
-    # test_set=normalize_data(test_set)
-    # train_set=normalize_data(train_set)
     
     np.savetxt('./data/{}/data_train_set.txt'.format(name), train_set)
     np.savetxt('./data/{}/data_test_set.txt'.format(name), test_set)
     
-    xtrain, ytrain, xtest, ytest = get_data2(backcast_length, forecast_length, ninterval, train_set, test_set)
+    xtrain, ytrain, xtest, ytest = get_data2(backcast_length, forecast_length, ninterval, train_set, test_set, gap)
 
     return xtrain, ytrain, xtest, ytest
 
@@ -95,10 +114,12 @@ def normalize_data(x):
     "value will be btwm 0 and 1"
     min=np.amin(x)
     max=np.amax(x)
-
-    x1=(x-min)/(max-min)
-    x2=(x-max)/(max-min)
-
+    if max-min == 0 :
+        x1=0
+        x2=0
+    else :
+        x1=(x-min)/(max-min)
+        x2=(x-max)/(max-min)
     return(0.5*(x1+x2))
 
 def merge_data(a,b):

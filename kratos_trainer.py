@@ -8,30 +8,31 @@ from nbeats import *
 import os
 
 
-def main(name,nlimit,device='cpu'):
+def main(name,device='cpu'):
     
-    test_path='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'   
-    train_set=register_training_signal(nlimit).transpose() #[time_step]x[dim] > [dim]x[time_step]
-    test_set=read_signal(test_path).transpose()
-    test_set=test_set[nlimit:nlimit+1,:]
-    train_set=np.expand_dims(train_set[-1,:],0) # comment if you want the [0,nlimit] signals
+    #  test_path='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'   
+    # train_set=register_training_signal(nlimit).transpose() #[time_step]x[dim] > [dim]x[time_step]
+    # test_set=read_signal(test_path).transpose()
+    # test_set=test_set[nlimit:nlimit+1,:]
+    # train_set=np.expand_dims(train_set[-1,:],0) # comment if you want the [0,nlimit] signals
 
-    if test_set.shape[0]==1 :
-        test_set=normalize_data(test_set)
-        train_set=normalize_data(train_set)
+   # if test_set.shape[0]==1 :
+   #     test_set=normalize_data(test_set)
+   #     train_set=normalize_data(train_set)
 
     # else :
     #     test_set=normalize_datas(test_set)
     #     train_set=normalize_datas(train_set)
         
-    print(test_set.shape)
-    print(train_set.shape)
+#    print(test_set.shape)
+#    print(train_set.shape)
 
-    backcast_length=80
-    forecast_length=80
+    backcast_length=100
+    forecast_length=100
     ninterval=backcast_length//10
 
-    xtrain, ytrain, xtest, ytest = get_all_data(backcast_length, forecast_length, ninterval, name)
+    xtrain, ytrain, xtest, ytest = get_all_data(backcast_length, forecast_length, ninterval, name, False)
+    
 
     print('we got the data : xtrain.shape :', xtrain.shape)
     print(ytrain.shape)
@@ -43,6 +44,7 @@ def main(name,nlimit,device='cpu'):
     torch.save(ytest,'./data/{}/ytest.pt'.format(name))
     torch.save(xtest,'./data/{}/xtest.pt'.format(name))
 
+    sys.exit()
     
     #Initiate an instance :
     
