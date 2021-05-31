@@ -19,7 +19,7 @@ class NBeatsNet(nn.Module):
                  block_types=(GENERIC_BLOCK, GENERIC_BLOCK),
                  forecast_length=5,
                  backcast_length=10,
-                 thetas_dim=(12, 12),
+                 thetas_dim=(96, 96),
                  hidden_layer_units=256,
                  nb_harmonics=None):
         
@@ -200,7 +200,7 @@ class Block(nn.Module):
             self.TFC=None
             self.fc = nn.Sequential(nn.Linear(backcast_length, units), nn.Linear(units, units), nn.Linear(units, units), nn.Linear(units, units))
         else :
-            self.TFC = TransformerModel(ninp=1,nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
+            self.TFC = TransformerModel(ninp=1,nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
             self.fc=None
         self.device = device
         self.backcast_linspace, self.forecast_linspace = linear_space(backcast_length, forecast_length)

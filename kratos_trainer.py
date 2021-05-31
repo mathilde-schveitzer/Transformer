@@ -31,7 +31,7 @@ def main(name,device='cpu'):
     forecast_length=100
     ninterval=backcast_length//10
 
-    xtrain, ytrain, xtest, ytest = get_all_data(backcast_length, forecast_length, ninterval, name, False)
+    xtrain, ytrain, xtest, ytest = get_all_data(backcast_length, forecast_length, ninterval, name, True)
     
 
     print('we got the data : xtrain.shape :', xtrain.shape)
