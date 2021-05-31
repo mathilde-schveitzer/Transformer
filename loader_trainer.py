@@ -19,7 +19,7 @@ def main(name,storage,device='cpu'):
 
     print('ok : we start to load the model')
     
-    epochs=200
+    epochs=500
     bsz=256
     eval_bsz=256
     backcast_length=100 #do not change until you load an other set of data
