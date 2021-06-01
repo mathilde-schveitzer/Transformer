@@ -13,37 +13,43 @@ def main(name,nlimit,device='cpu'):
     test_path='nbeats_f100/test/SAT2_10_minutes_future100_4.csv'   
     train_set=register_training_signal(nlimit).transpose() #[time_step]x[dim] > [dim]x[time_step]
     test_set=read_signal(test_path).transpose()
-    test_set=test_set[nlimit:nlimit+1,:]
-    train_set=np.expand_dims(train_set[-1,:],0) # comment if you want the [0,nlimit] signals
+    test_set=test_set[:nlimit+1,:]
+   #  train_set=np.expand_dims(train_set[-1,:],0) # comment if you want the [0,nlimit] signals
 
     if test_set.shape[0]==1 :
         test_set=normalize_data(test_set)
         train_set=normalize_data(train_set)
 
-    # else :
-    #     test_set=normalize_datas(test_set)
-    #     train_set=normalize_datas(train_set)
+    else :
+        test_set=normalize_datas(test_set)
+        train_set=normalize_datas(train_set)
         
     print(test_set.shape)
     print(train_set.shape)
 
-    backcast_length=80
-    forecast_length=80
-    ninterval=backcast_length//10
+    backcast_length=100
+    forecast_length=100
+    step=1
 
-    xtrain, ytrain, xtest, ytest = get_all_data(backcast_length, forecast_length, ninterval, name)
+    xtrain, ytrain, xtest, ytest = get_data2(backcast_length, forecast_length, step, train_set, test_set)
 
     print('we got the data : xtrain.shape :', xtrain.shape)
     print(ytrain.shape)
     print(xtest.shape)
     print(ytest.shape)
+
+    path='./data/{}'.format(name)
+    
+    if not os.path.exists(path) :
+        os.makedirs(path)
+
     
     torch.save(xtrain,'./data/{}/xtrain.pt'.format(name))
     torch.save(ytrain,'./data/{}/ytrain.pt'.format(name))
     torch.save(ytest,'./data/{}/ytest.pt'.format(name))
     torch.save(xtest,'./data/{}/xtest.pt'.format(name))
 
-    
+    sys.exit()
     #Initiate an instance :
     
     epochs=200
@@ -75,9 +81,10 @@ def main(name,nlimit,device='cpu'):
 if __name__ == '__main__':
    parser=argparse.ArgumentParser()
    parser.add_argument('name', help='The name of the folder in which out data will be saved')
+   parser.add_argument('nlimit', help='number of signals which will be stored')
    parser.add_argument('-device', help='Processor used for torch')
    args=parser.parse_args()
    if args.device :
-       main(args.name, device=args.device)
+       main(args.name, int(args.nlimit), device=args.device)
    else :
        main(args.name)

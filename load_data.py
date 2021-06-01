@@ -6,7 +6,7 @@ import torch
 import glob
 import os
 
-def get_data2(backast_length, forecast_length, n_interval, train_set, test_set) :
+def get_data2(backast_length, forecast_length, step, train_set, test_set) :
 
     
     assert len(train_set.shape)>1, 'please squeeze your data'
@@ -31,16 +31,16 @@ def get_data2(backast_length, forecast_length, n_interval, train_set, test_set) 
     length=forecast_length+backast_length
 
     
-    for i in tqdm(range(0,ntrain-length-n_interval*10,backast_length)) :
-        for gap in range(0,n_interval*10,10) :
+    for i in tqdm(range(0,ntrain-length-backast_length,backast_length)) :
+        for gap in range(0,backast_length,step) :
             time_series_cleaned_fortraining_x=train_set[:,i+gap:i+gap+backast_length].reshape(1,dim,backast_length).swapaxes(1,2)
             time_series_cleaned_fortraining_y=train_set[:,(i+gap+backast_length):(i+gap+backast_length+forecast_length)].reshape(1,dim,forecast_length).swapaxes(1,2)
 
             xtrain = np.vstack((xtrain, time_series_cleaned_fortraining_x))
             ytrain = np.vstack((ytrain, time_series_cleaned_fortraining_y))
 
-    for k in tqdm(range(0,ntest-length-n_interval*10,backast_length)):
-        for gap in range(0,n_interval*10,10) : #multiplie par n_interval le nb de donnees utilisables
+    for k in tqdm(range(0,ntest-length-backast_length,backast_length)):
+        for gap in range(0,backast_length,step) : #multiplie par n_interval le nb de donnees utilisables
             time_series_cleaned_fortesting_x=test_set[:,k+gap:k+gap+backast_length].reshape(1, dim, backast_length).swapaxes(1,2)
             time_series_cleaned_fortesting_y=test_set[:,k+gap+backast_length:(k+gap+forecast_length+backast_length)].reshape(1, dim, forecast_length).swapaxes(1,2)
 
@@ -95,10 +95,11 @@ def normalize_data(x):
     "value will be btwm 0 and 1"
     min=np.amin(x)
     max=np.amax(x)
-
-    x1=(x-min)/(max-min)
-    x2=(x-max)/(max-min)
-
+    x1=0.
+    x2=0.
+    if abs(max-min)>10**(-4) :
+        x1=(x-min)/(max-min)
+        x2=(x-max)/(max-min)
     return(0.5*(x1+x2))
 
 def merge_data(a,b):

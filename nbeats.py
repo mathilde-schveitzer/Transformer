@@ -15,16 +15,18 @@ class NBeatsNet(nn.Module):
     GENERIC_BLOCK = 'generic'
 
     def __init__(self,
+                 ninp,
                  device=torch.device('cpu'),
-                 block_types=(GENERIC_BLOCK, GENERIC_BLOCK),
+                 block_types=(GENERIC_BLOCK, GENERIC_BLOCK, GENERIC_BLOCK, GENERIC_BLOCK),
                  forecast_length=5,
                  backcast_length=10,
-                 thetas_dim=(48, 48),
-                 hidden_layer_units=256,
+                 thetas_dim=(4,4,4,4),
+                 hidden_layer_units=128,
                  nb_harmonics=None):
         
         super(NBeatsNet, self).__init__()
 
+        self.ninp=ninp
         self.forecast_length = forecast_length
         self.backcast_length = backcast_length
         self.hidden_layer_units = hidden_layer_units
@@ -38,7 +40,7 @@ class NBeatsNet(nn.Module):
 
         for block_id in range(len(self.block_types)):
             block_init = NBeatsNet.select_block(self.block_types[block_id])
-            block = block_init(self.hidden_layer_units, self.thetas_dim[block_id], self.device, self.backcast_length, self.forecast_length, block_type='Tr', nb_harmonics=self.nb_harmonics) #--> initialise your block in accordance with the type you've chosen just before
+            block = block_init(ninp, self.hidden_layer_units, self.thetas_dim[block_id], self.device, self.backcast_length, self.forecast_length, block_type='fully_connected', nb_harmonics=self.nb_harmonics) #--> initialise your block in accordance with the type you've chosen just before
             self.parameters.extend(block.parameters())
             self.stack.append(block)
         print('| Initialization . . . .')    
@@ -158,8 +160,10 @@ class NBeatsNet(nn.Module):
         forecast = torch.zeros(size=(backcast.size()[0], self.forecast_length, backcast.size()[-1]))  # maybe batch size here.
         for block_id in range(len(self.stack)):
             b, f = self.stack[block_id](backcast)
-            backcast = backcast.to(self.device) - b.unsqueeze(-1)
-            forecast = forecast.to(self.device) + f.unsqueeze(-1)
+            b=b.reshape((b.shape[0], self.backcast_length, self.ninp))
+            f=f.reshape((f.shape[0], self.forecast_length, self.ninp))
+            backcast = backcast.to(self.device) - b
+            forecast = forecast.to(self.device) + f
         return backcast, forecast
 
 
@@ -189,7 +193,7 @@ def linear_space(backcast_length, forecast_length):
 
 class Block(nn.Module):
 
-    def __init__(self, units, thetas_dim, device, backcast_length=10, forecast_length=5, block_type='fully_connected', nb_harmonics=None):
+    def __init__(self, ninp, units, thetas_dim, device, backcast_length=10, forecast_length=5, block_type='fully_connected', nb_harmonics=None):
         super(Block, self).__init__()
         self.units = units
         self.thetas_dim = thetas_dim
@@ -198,26 +202,26 @@ class Block(nn.Module):
         self.block_type=block_type
         if self.block_type=='fully_connected' :
             self.TFC=None
-            self.fc = nn.Sequential(nn.Linear(backcast_length, units), nn.Linear(units, units), nn.Linear(units, units), nn.Linear(units, units))
+            self.fc = nn.Sequential(nn.Linear(backcast_length*ninp, units*ninp), nn.Linear(units*ninp, units*ninp), nn.Linear(units*ninp, units*ninp), nn.Linear(units*ninp, units*ninp))
         else :
-            self.TFC = TransformerModel(ninp=1,nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
-            self.fc= nn.Linear(backcast_length, units)
+            self.TFC = TransformerModel(ninp,nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
+            self.fc= nn.Linear(backcast_length, units*ninp)
         self.device = device
         self.backcast_linspace, self.forecast_linspace = linear_space(backcast_length, forecast_length)
 
-        self.theta_b_fc = nn.Linear(units, thetas_dim, bias=False)
-        self.theta_f_fc = nn.Linear(units, thetas_dim, bias=False)
+        self.theta_b_fc = nn.Linear(units*ninp, thetas_dim*ninp, bias=False)
+        self.theta_f_fc = nn.Linear(units*ninp, thetas_dim*ninp, bias=False)
 
     def forward(self, x):
         if self.block_type=='fully_connected' :
-            x=x.squeeze(-1) #remove last dim (=1)
+            x=x.reshape((x.shape[0], x.shape[1]*x.shape[2]))
             output = F.relu(self.fc(x.to(self.device)))
         else :
             x = x.transpose(0,1)
             y = self.TFC(x.to(self.device))
-            output=y.transpose(0,1)
-            output=output.squeeze(-1) #remove last dim : seasonality input must be [bsz][length]
-            output=F.relu(self.fc(output)) # x=[128][units]
+            y=y.transpose(0,1)
+            y=y.reshape((y.shape[0], y.shape[1]*y.shape[2])) #remove last dim : seasonality input must be [bsz][length]
+            output=F.relu(self.fc(y)) # x=[128][units]
         return output
 
     def __str__(self):
@@ -258,13 +262,13 @@ class TrendBlock(Block):
         return backcast, forecast
 
 
-class GenericBlock(Block):
+class GenericBlock(Block): # je pourrais faire theta_dims=theta_dims*ninp
 
-    def __init__(self, units, thetas_dim, device, backcast_length=10, forecast_length=5, block_type='fully_connected', nb_harmonics=None):
-        super(GenericBlock, self).__init__(units, thetas_dim, device, backcast_length, forecast_length, block_type)
+    def __init__(self, ninp, units, thetas_dim, device, backcast_length=10, forecast_length=5, block_type='fully_connected', nb_harmonics=None):
+        super(GenericBlock, self).__init__(ninp, units, thetas_dim, device, backcast_length, forecast_length, block_type)
 
-        self.backcast_fc = nn.Linear(thetas_dim, backcast_length)
-        self.forecast_fc = nn.Linear(thetas_dim, forecast_length)
+        self.backcast_fc = nn.Linear(thetas_dim*ninp, backcast_length*ninp)
+        self.forecast_fc = nn.Linear(thetas_dim*ninp, forecast_length*ninp)
 
     def forward(self, x):
         # no constraint for generic arch.
