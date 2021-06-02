@@ -200,7 +200,7 @@ class Block(nn.Module):
             self.TFC=None
             self.fc = nn.Sequential(nn.Linear(backcast_length, units), nn.Linear(units, units), nn.Linear(units, units), nn.Linear(units, units))
         else :
-            self.TFC = TransformerModel(ninp=1,nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
+            self.TFC = TransformerModel(ninp,nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
             self.fc=None
         self.device = device
         self.backcast_linspace, self.forecast_linspace = linear_space(backcast_length, forecast_length)
