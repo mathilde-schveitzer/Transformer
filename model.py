@@ -6,7 +6,7 @@ import time
 import random
 import torch.nn as nn
 import torch.nn.functional as F
-import load_data as ld
+from load_data import *
 
 class TransformerModel(nn.Module):
 
@@ -50,18 +50,14 @@ class TransformerModel(nn.Module):
         start_time = time.time()
 
         assert len(xtrain)==len(ytrain)
-
-        shuffled_indices=list(range(len(xtrain)))
-        random.shuffle(shuffled_indices)
         
-        for k,batch_id in enumerate(shuffled_indices):
+        for batch_id in range(len(xtrain)):
            
-            data, targets = xtrain[batch_id], ytrain[batch_id]
+            data, targets = torch.tensor(xtrain[batch_id],dtype=torch.float).to(self.device), torch.tensor(ytrain[batch_id], dtype=torch.float).to(self.device)
             data=data.transpose(0,1)
             
             self.optimizer.zero_grad()
-            output = self(data)
-            
+            output = self(data)            
             loss=self._loss(output.reshape(-1), targets.transpose(0,1).reshape(-1).to(self.device))
                         
             loss.backward()
@@ -69,38 +65,23 @@ class TransformerModel(nn.Module):
             self.optimizer.step()
 
             total_loss += loss.item()
-            print('----------- total loss :', loss.item())
-            log_interval = 1
-            if k % log_interval == 50 : # donc tous les "log_interval" batchs
-                cur_loss = total_loss / log_interval
-                elapsed = time.time() - start_time
-                print(' {:5d}/{:5d} batches | ms/batch {:5.2f} | ''loss {:5.2f}' .format(batch_id, len(xtrain),elapsed * 1000 / log_interval,cur_loss))
+
+            log_interval = 50
+            if batch_id % log_interval == 0 :
+                if batch_id==0 :
+                    cur_loss=total_loss
+                else :
+                    cur_loss = total_loss / log_interval
+                print(' {:5d}/{:5d} batches | ''loss {:5.2f}' .format(batch_id, len(xtrain), cur_loss))
         
-                start_time = time.time()
                 total_loss=0
 
     def evaluate(self, xtest, ytest, bsz, val, name, predict=False, verbose=False):  
         self.eval() # Turn on the evaluation mode (herited from module)
 
-        def split(arr, size):
-           arrays = []
-           while len(arr) > size:
-               slice_ = arr[:size]
-               arrays.append(slice_)
-               arr = arr[size:]
-           arrays.append(arr)
-           return arrays
-       
         xtest_list=split(xtest, bsz)
-        ytest_list=split(ytest,bsz)
+        ytest_list=split(ytest, bsz)
         assert len(xtest_list)==len(ytest_list)
-
-        if verbose :
-           if val :
-               print('---VAL---')
-       
-           else :
-               print('---PAVAL---')
        
         if predict :
             prediction=torch.zeros_like(ytest)
@@ -109,22 +90,18 @@ class TransformerModel(nn.Module):
         
         for batch_id in range(0, len(xtest_list)):
        
-            data,targets=xtest_list[batch_id],ytest_list[batch_id]
+            data,targets=torch.tensor(xtest_list[batch_id], dtype=torch.float).to(self.device), torch.tensor(ytest_list[batch_id], dtype=torch.float).to(self.device)
             data=data.transpose(0,1)
             output=self(data)
             loss=self._loss(output.reshape(-1),targets.transpose(0,1).reshape(-1).to(self.device)).item()
-
             test_loss.append(loss)
 
             if predict :
                 #d'ou l'importance de passer les batch dans l'ordre
-                
-                
                 output=output.transpose(0,1)
-                
                 prediction[batch_id*output.shape[0]:(batch_id+1)*output.shape[0],:,:]=output
-                
                 print(prediction)
+                
         mean_loss=np.mean(test_loss)
 
         if val :
@@ -142,36 +119,44 @@ class TransformerModel(nn.Module):
         return(mean_loss)
 
 
-    def fit(self, xtrain, ytrain, xtest, ytest, bsz, eval_bsz, epochs, filename, save=True, verbose=False):
-        store_val_loss=np.zeros(epochs)
+    def fit(self, x_train, y_train, x_test, y_test, batch_size, epochs, filename, save=True, verbose=False):
+        store_test_loss=np.zeros(epochs)
         store_loss=np.zeros(epochs)
 
-        def split(arr, size):
-            arrays = []
-            while len(arr) > size:
-                slice_ = arr[:size]
-                arrays.append(slice_)
-                arr = arr[size:]
-            arrays.append(arr)
-            return arrays
+        x_test_list=split(x_test, batch_size)
+        y_test_list =split(y_test, batch_size)
+
+        test_loss= self.evaluate(x_test, y_test, batch_size, filename, False)
+        train_loss=self.evaluate(x_train, y_train, batch_size, filename, True)
+        store_loss[0]=train_loss
+        store_test_loss[0]=test_loss
+        print('test loss--------- : {}'.format(test_loss))
+        print('train loss-------- : {}'.format(train_loss))
+        np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
+        np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
+       
             
-        for epoch in range(1, epochs + 1):
-            epoch_start_time = time.time()
-            xtrain_list=split(xtrain, bsz)
-            ytrain_list=split(ytrain, bsz)
+        for epoch in range(1, epochs):
+            x_train, y_train=shuffle_in_unison(x_train,y_train)
+            x_train_list = split(x_train, batch_size)
+            y_train_list = split(y_train, batch_size)
+            log_epoch=1
+            if epoch % log_epoch == 0 :
+                print('|---------------- Epoch noumero {} ----------|'.format(epoch))
 
-            self.do_training(xtrain_list,ytrain_list)
-           
-            val_loss = self.evaluate(xtest, ytest, eval_bsz, True, filename, predict=False, verbose=verbose)
-            train_loss = self.evaluate(xtrain, ytrain, bsz, False, filename, predict=False,verbose=verbose)
-
-            store_loss[epoch-1]=train_loss
-            store_val_loss[epoch-1]=val_loss
-
-        if save :
+            epoch_start_time=time.time()
+            self.do_training(x_train_list, y_train_list)
+            elapsed_time=time.time()-epoch_start_time
+            
+            test_loss= self.evaluate(x_test, y_test, batch_size, filename, False)
+            train_loss=self.evaluate(x_train, y_train, batch_size, filename, True)
+            store_loss[epoch]=train_loss
+            store_test_loss[epoch]=test_loss
+            print('test loss--------- : {}'.format(test_loss))
+            print('train loss-------- : {}'.format(train_loss))
             np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
-            np.savetxt('./data/{}/val_loss.txt'.format(filename), store_val_loss)
-
+            np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
+            
 
 
 class MLForecast(nn.Module) :

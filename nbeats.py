@@ -20,8 +20,9 @@ class NBeatsNet(nn.Module):
                  block_types=(GENERIC_BLOCK, GENERIC_BLOCK, GENERIC_BLOCK, GENERIC_BLOCK),
                  forecast_length=5,
                  backcast_length=10,
-                 thetas_dim=(16,16,16,16),
-                 hidden_layer_units=16,
+                 thetas_dim=(64,64,64,64),
+                 hidden_layer_units=64,
+                 block_type='fully_connected',
                  nb_harmonics=None):
         
         super(NBeatsNet, self).__init__()
@@ -46,7 +47,7 @@ class NBeatsNet(nn.Module):
         print('| Initialization . . . .')    
         self.parameters = nn.ParameterList(self.parameters)
         
-        self._opt = optim.Adam(self.parameters(),lr=1e-5,amsgrad=True)
+        self._opt = optim.Adam(self.parameters(),lr=1e-3,amsgrad=True)
         self._loss =F.l1_loss
         self.to(self.device)
         
@@ -77,7 +78,7 @@ class NBeatsNet(nn.Module):
         np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
            
         
-        for epoch in range(1,epochs+1):
+        for epoch in range(1,epochs):
             x_train, y_train=shuffle_in_unison(x_train,y_train)
             x_train_list = split(x_train, batch_size)
             y_train_list = split(y_train, batch_size)
@@ -85,6 +86,7 @@ class NBeatsNet(nn.Module):
             log_epoch=1
             if epoch % log_epoch == 0 :
                 print('|---------------- Epoch noumero {} ----------|'.format(epoch))
+
             epoch_start_time=time.time()
             self.do_training(x_train_list, y_train_list)
             elapsed_time=time.time()-epoch_start_time
@@ -125,9 +127,8 @@ class NBeatsNet(nn.Module):
                     cur_loss=total_loss
                 else :
                     cur_loss = total_loss / log_interval
-                elapsed_time=time.time()-start_time
-                print(' {:5d}/{:5d} batches | ms/btach {:5.2f} | ''loss {:5.2f}'.format(batch_id, len(xtrain), elapsed_time* 1000 / log_interval, cur_loss))
-                start_time=time.time()
+                print(' {:5d}/{:5d} batches | ''loss {:5.2f}'.format(batch_id, len(xtrain), cur_loss))
+
                 total_loss=0
 
                       
@@ -217,8 +218,8 @@ class Block(nn.Module):
             self.fc3 = nn.Linear(units*ninp, units*ninp)
             self.fc4 = nn.Linear(units*ninp, units*ninp)
         else :
-            self.TFC = TransformerModel(ninp,nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
-            self.fc= nn.Linear(backcast_length, units*ninp)
+            self.TFC = TransformerModel(ninp,nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
+            self.fc= nn.Linear(backcast_length*ninp, units*ninp)
         self.device = device
         self.backcast_linspace, self.forecast_linspace = linear_space(backcast_length, forecast_length)
 
@@ -233,8 +234,8 @@ class Block(nn.Module):
             x = x.transpose(0,1)
             y = self.TFC(x.to(self.device))
             y=y.transpose(0,1)
-            y=y.reshape((y.shape[0], y.shape[1]*y.shape[2])) #remove last dim : seasonality input must be [bsz][length]
-            output=F.relu(self.fc(y)) # x=[128][units]
+            y=y.reshape((y.shape[0], y.shape[1]*y.shape[2])) #remove last dim : block input=[bsz][length*ninp]
+            output=F.relu(self.fc(y))
         return output
 
     def __str__(self):
