@@ -17,12 +17,13 @@ def main(name,storage,ninp,device='cpu'):
     ytrain=torch.load('./data/{}/ytrain.pt'.format(name))
     xtest=torch.load('./data/{}/xtest.pt'.format(name))
     ytest=torch.load('./data/{}/ytest.pt'.format(name))
-
+    print(xtrain.shape)
+    print(xtest.shape)
     print('ok : we start to load the model')
     
     epochs=500
-    bsz=256
-    eval_bsz=256
+    bsz=50
+    eval_bsz=50
     backcast_length=100 #do not change until you load an other set of data
     forecast_length=100
 

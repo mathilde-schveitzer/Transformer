@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch import nn, optim
 from torch.nn import functional as F
-from load_data import split
+from load_data import split, shuffle_in_unison
 from model import TransformerModel
 
 class NBeatsNet(nn.Module):
@@ -20,8 +20,8 @@ class NBeatsNet(nn.Module):
                  block_types=(GENERIC_BLOCK, GENERIC_BLOCK, GENERIC_BLOCK, GENERIC_BLOCK),
                  forecast_length=5,
                  backcast_length=10,
-                 thetas_dim=(4,4,4,4),
-                 hidden_layer_units=128,
+                 thetas_dim=(16,16,16,16),
+                 hidden_layer_units=16,
                  nb_harmonics=None):
         
         super(NBeatsNet, self).__init__()
@@ -46,7 +46,7 @@ class NBeatsNet(nn.Module):
         print('| Initialization . . . .')    
         self.parameters = nn.ParameterList(self.parameters)
         
-        self._opt = optim.Adam(self.parameters(),lr=1e-5)
+        self._opt = optim.Adam(self.parameters(),lr=1e-5,amsgrad=True)
         self._loss =F.l1_loss
         self.to(self.device)
         
@@ -63,14 +63,26 @@ class NBeatsNet(nn.Module):
         store_test_loss=np.zeros(epochs)
         store_loss=np.zeros(epochs)
         
-        x_train_list = split(x_train, batch_size)
-        y_train_list = split(y_train, batch_size)
-
+       
         x_test_list=split(x_test, batch_size)
         y_test_list =split(y_test, batch_size)
+
+        test_loss= self.evaluate(x_test, y_test, batch_size, filename, False)
+        train_loss=self.evaluate(x_train, y_train, batch_size, filename, True)
+        store_loss[0]=train_loss
+        store_test_loss[0]=test_loss
+        print('test loss--------- : {}'.format(test_loss))
+        print('train loss-------- : {}'.format(train_loss))
+        np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
+        np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
+           
         
         for epoch in range(1,epochs+1):
-            log_epoch=50
+            x_train, y_train=shuffle_in_unison(x_train,y_train)
+            x_train_list = split(x_train, batch_size)
+            y_train_list = split(y_train, batch_size)
+            
+            log_epoch=1
             if epoch % log_epoch == 0 :
                 print('|---------------- Epoch noumero {} ----------|'.format(epoch))
             epoch_start_time=time.time()
@@ -79,11 +91,12 @@ class NBeatsNet(nn.Module):
             
             test_loss= self.evaluate(x_test, y_test, batch_size, filename, False)
             train_loss=self.evaluate(x_train, y_train, batch_size, filename, True)
-            store_loss[epoch-1]=train_loss
-            store_test_loss[epoch-1]=test_loss
-
-        np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
-        np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
+            store_loss[epoch]=train_loss
+            store_test_loss[epoch]=test_loss
+            print('test loss--------- : {}'.format(test_loss))
+            print('train loss-------- : {}'.format(train_loss))
+            np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
+            np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
             
 
     def do_training(self, xtrain, ytrain) :
@@ -93,10 +106,8 @@ class NBeatsNet(nn.Module):
             
         assert len(xtrain)==len(ytrain)
 
-        shuffled_indices=list(range(len(xtrain)))
-        random.shuffle(shuffled_indices)
 
-        for k, batch_id in enumerate(shuffled_indices) :
+        for batch_id in range(len(xtrain)) :
 
             data, targets= xtrain[batch_id], ytrain[batch_id]
             self._opt.zero_grad()
@@ -109,13 +120,13 @@ class NBeatsNet(nn.Module):
            
             log_interval = 50
             
-            if k % log_interval == 0 :
-                if k==0 :
+            if batch_id % log_interval == 0 :
+                if batch_id==0 :
                     cur_loss=total_loss
                 else :
                     cur_loss = total_loss / log_interval
                 elapsed_time=time.time()-start_time
-                print(' {:5d}/{:5d} batches | ms/btach {:5.2f} | ''loss {:5.2f}'.format(k, len(xtrain), elapsed_time* 1000 / log_interval, cur_loss))
+                print(' {:5d}/{:5d} batches | ms/btach {:5.2f} | ''loss {:5.2f}'.format(batch_id, len(xtrain), elapsed_time* 1000 / log_interval, cur_loss))
                 start_time=time.time()
                 total_loss=0
 
@@ -128,12 +139,11 @@ class NBeatsNet(nn.Module):
 
         prediction=np.zeros_like(ytest)
         test_loss=[]
-        for batch_id in range(0, len(xtest_list)) :
+        for batch_id in range(len(xtest_list)) :
             data, targets = xtest_list[batch_id], ytest_list[batch_id]
             _,output=self(torch.tensor(data, dtype=torch.float).to(self.device))
             loss=self._loss(output, torch.tensor(targets, dtype=torch.float).to(self.device))
             test_loss.append(loss.item())
-            output=output
             prediction[batch_id*output.shape[0]:(batch_id+1)*output.shape[0],:,:]=output.cpu().detach().numpy()
         if save :
             if train :
@@ -202,7 +212,10 @@ class Block(nn.Module):
         self.block_type=block_type
         if self.block_type=='fully_connected' :
             self.TFC=None
-            self.fc = nn.Sequential(nn.Linear(backcast_length*ninp, units*ninp), nn.Linear(units*ninp, units*ninp), nn.Linear(units*ninp, units*ninp), nn.Linear(units*ninp, units*ninp))
+            self.fc1 = nn.Linear(backcast_length*ninp, units*ninp)
+            self.fc2 = nn.Linear(units*ninp, units*ninp)
+            self.fc3 = nn.Linear(units*ninp, units*ninp)
+            self.fc4 = nn.Linear(units*ninp, units*ninp)
         else :
             self.TFC = TransformerModel(ninp,nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
             self.fc= nn.Linear(backcast_length, units*ninp)
@@ -215,7 +228,7 @@ class Block(nn.Module):
     def forward(self, x):
         if self.block_type=='fully_connected' :
             x=x.reshape((x.shape[0], x.shape[1]*x.shape[2]))
-            output = F.relu(self.fc(x.to(self.device)))
+            output = F.relu(self.fc4(F.relu(self.fc3(F.relu(self.fc2(F.relu(self.fc1(x.to(self.device)))))))))
         else :
             x = x.transpose(0,1)
             y = self.TFC(x.to(self.device))

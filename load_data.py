@@ -6,55 +6,37 @@ import torch
 import glob
 import os
 
-def get_data2(backast_length, forecast_length, step, train_set, test_set) :
+def get_data(backast_length, forecast_length, step, data_set) :
 
+    assert len(data_set.shape)>1, 'please squeeze your data'
+
+    dim=data_set.shape[0]
     
-    assert len(train_set.shape)>1, 'please squeeze your data'
-    assert train_set.shape[0]==test_set.shape[0], 'train and test sets should have same dimension'
-    dim=train_set.shape[0]
-    ntrain=train_set.shape[1]
-    ntest=test_set.shape[1]
+    x = np.empty((0, backast_length, dim))
+    y = np.empty((0, forecast_length, dim))
+    
+    time_series_cleaned_x=np.zeros((1, backast_length, dim))
+    time_series_cleaned_y=np.zeros((1, forecast_length, dim))
 
-    xtrain = np.empty((0, backast_length, dim))
-    ytrain = np.empty((0, forecast_length, dim))
-
-    xtest = np.empty((0, backast_length, dim))
-    ytest = np.empty((0, forecast_length, dim))
-
-
-    time_series_cleaned_fortraining_x=np.zeros((1, backast_length, dim))
-    time_series_cleaned_fortraining_y=np.zeros((1, forecast_length, dim))
-
-    time_series_cleaned_fortesting_x=np.zeros((1, backast_length, dim))
-    time_series_cleaned_fortesting_y=np.zeros((1, forecast_length, dim))
-
+    time_length=data_set.shape[1]
     length=forecast_length+backast_length
 
-    
-    for i in tqdm(range(0,ntrain-length-backast_length,backast_length)) :
+    for i in tqdm(range(0,time_length-length-backast_length,backast_length)) :
+
         for gap in range(0,backast_length,step) :
-            time_series_cleaned_fortraining_x=train_set[:,i+gap:i+gap+backast_length].reshape(1,dim,backast_length).swapaxes(1,2)
-            time_series_cleaned_fortraining_y=train_set[:,(i+gap+backast_length):(i+gap+backast_length+forecast_length)].reshape(1,dim,forecast_length).swapaxes(1,2)
+            time_series_cleaned_x=data_set[:,i+gap:i+gap+backast_length].reshape(1,dim,backast_length).swapaxes(1,2)
+            time_series_cleaned_y=data_set[:,(i+gap+backast_length):(i+gap+backast_length+forecast_length)].reshape(1,dim,forecast_length).swapaxes(1,2)
 
-            xtrain = np.vstack((xtrain, time_series_cleaned_fortraining_x))
-            ytrain = np.vstack((ytrain, time_series_cleaned_fortraining_y))
-
-    for k in tqdm(range(0,ntest-length-backast_length,backast_length)):
-        for gap in range(0,backast_length,step) : #multiplie par n_interval le nb de donnees utilisables
-            time_series_cleaned_fortesting_x=test_set[:,k+gap:k+gap+backast_length].reshape(1, dim, backast_length).swapaxes(1,2)
-            time_series_cleaned_fortesting_y=test_set[:,k+gap+backast_length:(k+gap+forecast_length+backast_length)].reshape(1, dim, forecast_length).swapaxes(1,2)
-
-            xtest = np.vstack((xtest, time_series_cleaned_fortesting_x))
-            ytest = np.vstack((ytest, time_series_cleaned_fortraining_y))
-
-    xtrain,ytrain=shuffle_in_unison(xtrain, ytrain)
-    xtest,ytest=shuffle_in_unison(xtest, ytest)
-                            
-    return xtrain, ytrain, xtest, ytest    
+            x = np.vstack((x, time_series_cleaned_x))
+            y = np.vstack((y, time_series_cleaned_y))
+    
+    x,y=shuffle_in_unison(x,y)
+    
+    return x,y    
 
 
 def get_all_data(backcast_length, forecast_length, ninterval, name) :
-
+    print('i')
     storage_path='./data/{}'.format(name)
     if not os.path.exists(storage_path) :
         os.makedirs(storage_path)
@@ -63,10 +45,13 @@ def get_all_data(backcast_length, forecast_length, ninterval, name) :
     files=glob.glob(path)
     x=np.empty
     for k,filename in enumerate(files):
-        if k==0 :
+        print(filename)
+    sys.exit()
+
+    if k==0 :
             time_series=read_signal(filename)
             x=time_series
-        else :
+    else :
             time_series=read_signal(filename)
             x=np.vstack((x,time_series))
 
@@ -198,7 +183,6 @@ def normalize_datas(data) :
         data[i,:]=normalize_data(data[i,:])
     return(data)
 
-
 def split(arr, size):
     arrays = []
     while len(arr) > size:
@@ -207,3 +191,13 @@ def split(arr, size):
         arr = arr[size:]
     arrays.append(arr)
     return arrays
+
+def split_set(x,y,ratio=0.1):
+    n=x.shape[0]
+    limit=int(ratio*n)
+    xtest=x[:limit,:,:]
+    ytest=y[:limit,:,:]
+    xtrain=x[limit:,:,:]
+    ytrain=y[limit:,:,:]
+
+    return(xtrain,ytrain,xtest,ytest)
