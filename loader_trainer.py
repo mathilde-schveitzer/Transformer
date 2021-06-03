@@ -34,6 +34,9 @@ def main(name,storage,ninp,device='cpu'):
 
     ninp+=1
 
+    print(ninp)
+    print(type(ninp))
+
     model=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length,block_type='Tr2')
 
     

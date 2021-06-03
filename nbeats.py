@@ -15,16 +15,18 @@ class NBeatsNet(nn.Module):
     GENERIC_BLOCK = 'generic'
 
     def __init__(self,
+                 ninp,
                  device=torch.device('cpu'),
                  block_types=(GENERIC_BLOCK, GENERIC_BLOCK),
                  forecast_length=5,
                  backcast_length=10,
                  thetas_dim=(96, 96),
                  hidden_layer_units=256,
+                 block_type='fully_connected',
                  nb_harmonics=None):
         
         super(NBeatsNet, self).__init__()
-
+        self.ninp = ninp
         self.forecast_length = forecast_length
         self.backcast_length = backcast_length
         self.hidden_layer_units = hidden_layer_units
@@ -38,7 +40,7 @@ class NBeatsNet(nn.Module):
 
         for block_id in range(len(self.block_types)):
             block_init = NBeatsNet.select_block(self.block_types[block_id])
-            block = block_init(self.hidden_layer_units, self.thetas_dim[block_id], self.device, self.backcast_length, self.forecast_length, block_type='Tr', nb_harmonics=self.nb_harmonics) #--> initialise your block in accordance with the type you've chosen just before
+            block = block_init(self.ninp, self.hidden_layer_units, self.thetas_dim[block_id], self.device, self.backcast_length, self.forecast_length,block_type, nb_harmonics=self.nb_harmonics) #--> initialise your block in accordance with the type you've chosen just before
             self.parameters.extend(block.parameters())
             self.stack.append(block)
         print('| Initialization . . . .')    
@@ -158,8 +160,8 @@ class NBeatsNet(nn.Module):
         forecast = torch.zeros(size=(backcast.size()[0], self.forecast_length, backcast.size()[-1]))  # maybe batch size here.
         for block_id in range(len(self.stack)):
             b, f = self.stack[block_id](backcast)
-            backcast = backcast.to(self.device) - b.unsqueeze(-1)
-            forecast = forecast.to(self.device) + f.unsqueeze(-1)
+            backcast = backcast.to(self.device) - b.reshape((b.shape[0], self.backcast_length, self.ninp))
+            forecast = forecast.to(self.device) + f.reshape((f.shape[0], self.forecast_length, self.ninp))
         return backcast, forecast
 
 
@@ -189,8 +191,9 @@ def linear_space(backcast_length, forecast_length):
 
 class Block(nn.Module):
 
-    def __init__(self, units, thetas_dim, device, backcast_length=10, forecast_length=5, block_type='fully_connected', nb_harmonics=None):
+    def __init__(self, ninp, units, thetas_dim, device, backcast_length=10, forecast_length=5, block_type='fully_connected', nb_harmonics=None):
         super(Block, self).__init__()
+        self.ninp = ninp
         self.units = units
         self.thetas_dim = thetas_dim
         self.backcast_length = backcast_length
@@ -200,7 +203,7 @@ class Block(nn.Module):
             self.TFC=None
             self.fc = nn.Sequential(nn.Linear(backcast_length, units), nn.Linear(units, units), nn.Linear(units, units), nn.Linear(units, units))
         else :
-            self.TFC = TransformerModel(ninp,nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
+            self.TFC = TransformerModel(ninp, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
             self.fc=None
         self.device = device
         self.backcast_linspace, self.forecast_linspace = linear_space(backcast_length, forecast_length)
@@ -208,10 +211,10 @@ class Block(nn.Module):
             self.theta_b_fc = nn.Linear(units, thetas_dim, bias=False)
             self.theta_f_fc = nn.Linear(units, thetas_dim, bias=False)
         else :
-            self.trans_b_fc= TransformerModel(ninp=1, nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
-            self.trans_f_fc= TransformerModel(ninp=1, nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
-            self.theta_b_fc = nn.Sequential(nn.Linear(backcast_length, units), nn.Linear(units, thetas_dim, bias=False))
-            self.theta_f_fc = nn.Sequential(nn.Linear(forecast_length, units), nn.Linear(units, thetas_dim, bias=False))
+            self.trans_b_fc= TransformerModel(ninp, nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
+            self.trans_f_fc= TransformerModel(ninp, nhead=2, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
+            self.theta_b_fc = nn.Sequential(nn.Linear(backcast_length*ninp, units*ninp), nn.Linear(units*ninp, thetas_dim*ninp, bias=False))
+            self.theta_f_fc = nn.Sequential(nn.Linear(forecast_length*ninp, units*ninp), nn.Linear(units*ninp, thetas_dim*ninp, bias=False))
 
     def forward(self, x):
         if self.block_type=='fully_connected' :
@@ -267,11 +270,11 @@ class TrendBlock(Block):
 
 class GenericBlock(Block):
 
-    def __init__(self, units, thetas_dim, device, backcast_length=10, forecast_length=5, block_type='fully_connected', nb_harmonics=None):
-        super(GenericBlock, self).__init__(units, thetas_dim, device, backcast_length, forecast_length, block_type)
+    def __init__(self, ninp, units, thetas_dim, device, backcast_length=10, forecast_length=5, block_type='fully_connected', nb_harmonics=None):
+        super(GenericBlock, self).__init__(ninp, units, thetas_dim, device, backcast_length, forecast_length, block_type)
 
-        self.backcast_fc = nn.Linear(thetas_dim, backcast_length)
-        self.forecast_fc = nn.Linear(thetas_dim, forecast_length)
+        self.backcast_fc = nn.Linear(thetas_dim*ninp, backcast_length*ninp)
+        self.forecast_fc = nn.Linear(thetas_dim*ninp, forecast_length*ninp)
 
     def forward(self, x):
         # no constraint for generic arch.
@@ -283,12 +286,13 @@ class GenericBlock(Block):
         else :
             trans_b = self.trans_b_fc(x) # pas besoin de transposer ici, on sort du precedent transformer
             trans_f = self.trans_f_fc(x)
-
+            
             trans_b = trans_b.transpose(0,1)
             trans_f = trans_f.transpose(0,1)
         
-            trans_b = trans_b.squeeze(-1)
-            trans_f = trans_f.squeeze(-1)
+            trans_b = trans_b.reshape((trans_b.shape[0], trans_b.shape[1]*trans_b.shape[2]))
+            trans_f = trans_f.reshape((trans_f.shape[0], trans_f.shape[1]*trans_f.shape[2]))
+
             
             theta_b = F.relu(self.theta_b_fc(trans_b))
             theta_f = F.relu(self.theta_f_fc(trans_f))
