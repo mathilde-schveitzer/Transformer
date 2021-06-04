@@ -11,21 +11,21 @@ def main(name,storage,ninp,device='cpu'):
     
 
     name_='nbeats_tr_{}'.format(storage)
-    name1='nbeats_fc_{}'.format(storage)
-    name2='transformer_{}'.format(storage)
+  #  name1='nbeats_fc_{}'.format(storage)
+  #  name2='transformer_{}'.format(storage)
 
     storage_path='./data/{}'.format(name_)
-    storage_path_='./data/{}'.format(name1)
-    storage_path__='./data/{}'.format(name2)
+ #   storage_path_='./data/{}'.format(name1)
+ #   storage_path__='./data/{}'.format(name2)
 
     if not os.path.exists(storage_path) :
         os.makedirs(storage_path)
 
-    if not os.path.exists(storage_path_) :
-        os.makedirs(storage_path_)
+  #  if not os.path.exists(storage_path_) :
+  #      os.makedirs(storage_path_)
 
-    if not os.path.exists(storage_path__) :
-        os.makedirs(storage_path__)
+  #  if not os.path.exists(storage_path__) :
+  #      os.makedirs(storage_path__)
 
 
     xtrain=torch.load('./data/{}/xtrain.pt'.format(name))
@@ -44,19 +44,19 @@ def main(name,storage,ninp,device='cpu'):
 
     ninp+=1
 
-    model=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length,block_type='fully_connected')
+ #   model=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length,block_type='fully_connected')
     model__=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length,block_type='Tr')
-    model_=TransformerModel(ninp, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.5, device=device)
+ #   model_=TransformerModel(ninp, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.5, device=device)
 
     
-    print("Model structure: ", model, "\n\n")
-    for layer_name, param in model.named_parameters():
+    print("Model structure: ", model__, "\n\n")
+    for layer_name, param in model__.named_parameters():
         print(f"Layer: {layer_name} | Size: {param.size()} \n")
 
     start_time=time.time()
-    model.fit(xtrain, ytrain, xtest, ytest, name1, epochs=epochs, batch_size=bsz)
+   # model.fit(xtrain, ytrain, xtest, ytest, name1, epochs=epochs, batch_size=bsz)
     model__.fit(xtrain, ytrain, xtest, ytest, name_, epochs=epochs, batch_size=bsz)
-    model_.fit(xtrain, ytrain, xtest, ytest, bsz, epochs, name2)
+   # model_.fit(xtrain, ytrain, xtest, ytest, bsz, epochs, name2)
     
     elapsed_time=time.time()-start_time
     test_loss = model.evaluate(xtest, ytest, eval_bsz, storage, False, save=False)
