@@ -17,10 +17,10 @@ class NBeatsNet(nn.Module):
     def __init__(self,
                  ninp,
                  device=torch.device('cpu'),
-                 block_types=(GENERIC_BLOCK, GENERIC_BLOCK, GENERIC_BLOCK, GENERIC_BLOCK),
+                 block_types=(GENERIC_BLOCK,),
                  forecast_length=5,
                  backcast_length=10,
-                 thetas_dim=(128, 128, 128, 128),
+                 thetas_dim=(128,),
                  hidden_layer_units=128,
                  block_type='fully_connected',
                  nb_harmonics=None):
