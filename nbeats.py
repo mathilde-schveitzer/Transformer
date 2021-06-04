@@ -218,7 +218,7 @@ class Block(nn.Module):
             self.fc3 = nn.Linear(units*ninp, units*ninp)
             self.fc4 = nn.Linear(units*ninp, units*ninp)
         else :
-            self.TFC = TransformerModel(ninp,nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.1, device=device)
+            self.TFC = TransformerModel(ninp,nhead=1, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.1, device=device)
             self.fc= nn.Linear(backcast_length*ninp, units*ninp)
         self.device = device
         self.backcast_linspace, self.forecast_linspace = linear_space(backcast_length, forecast_length)
