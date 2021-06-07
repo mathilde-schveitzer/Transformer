@@ -1,4 +1,3 @@
-import sys
 import os
 import numpy as np
 import math
@@ -7,27 +6,29 @@ import time
 import random
 import torch.nn as nn
 import torch.nn.functional as F
-import load_data as ld
 from periodic_activation import SineActivation
+from load_data import *
 
 class TransformerModel(nn.Module):
 
-    def __init__(self, ninp, nhead, nhid, nlayers, nMLP, backast_size, forecast_size, dropout=0.5, device=torch.device('cpu')):
+    def __init__(self, ninp, nhead, nhid, nlayers, backast_size, forecast_size, dropout=0.5, t2v=False, device=torch.device('cpu')):
+
         super(TransformerModel, self).__init__()
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
         self.model_type = 'Transformer'
         self.embed_dims=ninp*nhead
         self.device = device
         encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout, activation='gelu')
-        self.encoder=Encoder(ninp, self.embed_dims, hidden_dim=128, device=device)
+        if t2v :
+            self.encoder=Encoder(ninp, self.embed_dims, hidden_dim=128, device=device)
+        else :
+            self.encoder=nn.Linear(ninp, self.embed_dims)
+
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)       
         self.decoder=Decoder(self.embed_dims, ninp, forecast_size,backast_size,device=device)
-
-
         self.parameters = []
-        self.parameters = nn.ParameterList(self.parameters)
-        
-        self.optimizer=torch.optim.Adam(self.parameters(),lr=1e-3,betas=(0.9,0.98))
+        self.parameters = nn.ParameterList(self.parameters)        
+        self.optimizer=torch.optim.Adam(self.parameters(),lr=1e-5)
         self._loss=F.l1_loss
 
         self.to(self.device)
@@ -35,34 +36,25 @@ class TransformerModel(nn.Module):
         print('| T R A N S F O R M E R : Optimus Prime is ready |')
 
     def forward(self, input):
-        input=input.to(self.device) #dtype=float32
-        
+        input=input.to(self.device) #dtype=float32        
         input = self.encoder(input)
-        
         output = self.transformer_encoder(input)
-
         _output = self.decoder(output)
-
         return _output
     
     def do_training(self,xtrain,ytrain):
         self.train() # Turn on the train mode (herited from module)
         total_loss = 0.
         start_time = time.time()
-
         assert len(xtrain)==len(ytrain)
-
-        shuffled_indices=list(range(len(xtrain)))
-        random.shuffle(shuffled_indices)
         
-        for k,batch_id in enumerate(shuffled_indices):
+        for batch_id in range(len(xtrain)):
            
-            data, targets = xtrain[batch_id], ytrain[batch_id]
+            data, targets = torch.tensor(xtrain[batch_id],dtype=torch.float).to(self.device), torch.tensor(ytrain[batch_id], dtype=torch.float).to(self.device)
             data=data.transpose(0,1)
             
             self.optimizer.zero_grad()
-            output = self(data)
-            
+            output = self(data)            
             loss=self._loss(output.reshape(-1), targets.transpose(0,1).reshape(-1).to(self.device))
                         
             loss.backward()
@@ -70,58 +62,43 @@ class TransformerModel(nn.Module):
             self.optimizer.step()
 
             total_loss += loss.item()
-            print('----------- total loss :', loss.item())
-            log_interval = 10
-            if k % log_interval == 0 : # donc tous les "log_interval" batchs
-                print(targets)
-                print(output)
-                cur_loss = total_loss / log_interval
-                elapsed = time.time() - start_time
-                print(' {:5d}/{:5d} batches | ms/batch {:5.2f} | ''loss {:5.2f}' .format(batch_id, len(xtrain),elapsed * 1000 / log_interval,cur_loss))
-        
-                start_time = time.time()
+            log_interval = 50
+            if batch_id % log_interval == 0 :
+                if batch_id==0 :
+                    cur_loss=total_loss
+                else :
+                    cur_loss = total_loss / log_interval
+                print(' {:5d}/{:5d} batches | ''loss {:5.2f}' .format(batch_id, len(xtrain), cur_loss))
+
                 total_loss=0
 
 
     def evaluate(self,xtest, ytest, bsz, val, name, predict=False):  
         self.eval() # Turn on the evaluation mode (herited from module)
 
-        def split(arr, size):
-           arrays = []
-           while len(arr) > size:
-               slice_ = arr[:size]
-               arrays.append(slice_)
-               arr = arr[size:]
-           arrays.append(arr)
-           return arrays
-       
         xtest_list=split(xtest, bsz)
-        ytest_list=split(ytest,bsz)
+        ytest_list=split(ytest, bsz)
         assert len(xtest_list)==len(ytest_list)
        
         if predict :
             prediction=torch.zeros_like(ytest)
-            print('prediction.shape', prediction.shape)
+            
         test_loss = []
         
         for batch_id in range(0, len(xtest_list)):
        
-            data,targets=xtest_list[batch_id],ytest_list[batch_id]
+            data,targets=torch.tensor(xtest_list[batch_id], dtype=torch.float).to(self.device), torch.tensor(ytest_list[batch_id], dtype=torch.float).to(self.device)
             data=data.transpose(0,1)
             output=self(data)
             loss=self._loss(output.reshape(-1),targets.transpose(0,1).reshape(-1).to(self.device)).item()
-
             test_loss.append(loss)
 
             if predict :
                 #d'ou l'importance de passer les batch dans l'ordre
-                print('targets.shape',targets.shape)
-                print(output.shape)
                 output=output.transpose(0,1)
-                print(output)
                 prediction[batch_id*output.shape[0]:(batch_id+1)*output.shape[0],:,:]=output
-                
                 print(prediction)
+                
         mean_loss=np.mean(test_loss)
 
         if val :
@@ -139,106 +116,51 @@ class TransformerModel(nn.Module):
         return(mean_loss)
 
 
-    def fit(self, xtrain, ytrain, xtest, ytest, bsz, eval_bsz, epochs, filename, save=True, verbose=False):
-        store_val_loss=np.zeros(epochs)
+    def fit(self, x_train, y_train, x_test, y_test, batch_size, epochs, filename):
+        store_test_loss=np.zeros(epochs)
         store_loss=np.zeros(epochs)
 
-        def split(arr, size):
-            arrays = []
-            while len(arr) > size:
-                slice_ = arr[:size]
-                arrays.append(slice_)
-                arr = arr[size:]
-            arrays.append(arr)
-            return arrays
 
-        if save :
-            torch.save(xtrain,'./data/{}/xtrain.pt'.format(filename))
-            torch.save(ytrain,'./data/{}/ytrain.pt'.format(filename))
-            torch.save(xtest,'./data/{}/xtest.pt'.format(filename))
-            torch.save(ytest,'./data/{}/ytest.pt'.format(filename))
-            
-        for epoch in range(1, epochs + 1):
-            print('-----------epoch # {} / {} ----------------'.format(epoch,epochs))
-            epoch_start_time = time.time()
-            xtrain_list=split(xtrain, bsz)
-            ytrain_list=split(ytrain, bsz)
+        x_test_list=split(x_test, batch_size)
+        y_test_list=split(y_test, batch_size)
 
-            self.do_training(xtrain_list,ytrain_list)
-           
-            val_loss = self.evaluate(xtest, ytest, eval_bsz, True, filename, predict=False)
-            train_loss = self.evaluate(xtrain, ytrain, bsz, False, filename, predict=False)
+        test_loss=self.evaluate(x_test, y_test, batch_size, filename, False)
+        train_loss=self.evaluate(x_train, y_train, batch_size, filename, True)
+        store_loss[0]=train_loss
+        store_test_loss[0]=test_loss
+        print('test loss--------- : {}'.format(test_loss))
+        print('train loss-------- : {}'.format(train_loss))
 
-            store_loss[epoch-1]=train_loss
-            store_val_loss[epoch-1]=val_loss
-
-       
         np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
-        np.savetxt('./data/{}/val_loss.txt'.format(filename), store_val_loss)
+        np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)       
+            
+        for epoch in range(1, epochs):
+            x_train, y_train=shuffle_in_unison(x_train,y_train)
+            x_train_list = split(x_train, batch_size)
+            y_train_list = split(y_train, batch_size)
+            log_epoch=1
+            if epoch % log_epoch == 0 :
+                print('|---------------- Epoch noumero {} ----------|'.format(epoch))
 
-    def evaluate_whole_signal(self,data_set,bsz,name,train=True):  
-        self.eval() # Turn on the evaluation mode (herited from module)
+            epoch_start_time=time.time()
+            self.do_training(x_train_list, y_train_list)
+            elapsed_time=time.time()-epoch_start_time
+            
+            test_loss= self.evaluate(x_test, y_test, batch_size, filename, False)
+            train_loss=self.evaluate(x_train, y_train, batch_size, filename, True)
+            store_loss[epoch]=train_loss
+            store_test_loss[epoch]=test_loss
+            print('test loss--------- : {}'.format(test_loss))
+            print('train loss-------- : {}'.format(train_loss))
+            np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
+            np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
+            
 
-        def split(arr, size):
-            arrays = []
-            while len(arr) > size:
-                slice_ = arr[:size]
-                arrays.append(slice_)
-                arr = arr[size:]
-            arrays.append(arr)
-            return arrays
-       
-        data_set_list=split(data_set, bsz)           
-        prediction=torch.zeros_like(data_set)
-    
-        for batch_id in range(0, len(data_set_list)):
-       
-            data=data_set_list[batch_id].to(self.device)
-
-            data=data.transpose(0,1)
-            output=self(data)        
-            output=output.transpose(0,1)
-            prediction[batch_id*output.shape[0]:(batch_id+1)*output.shape[0],:,:]=output
-
-        if train : torch.save(prediction, './data/{}/predictions_whole_train_set.pt'.format(name))
-        else : torch.save(prediction, './data/{}/predictions_whole_test_set.pt'.format(name))
-
-class PositionalEncoding(nn.Module):
-
-    def __init__(self, d_model, device, dropout=0.1, max_len=5000):
-        super(PositionalEncoding, self).__init__()
-        self.dropout = nn.Dropout(p=dropout)
-
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0).transpose(0, 1)
-        self.register_buffer('pe', pe)
-        self.device=device
-        
-    def forward(self, x):
-        pencod=self.pe[:x.shape[0], :].to(self.device)
-        x = x + self.pe[:x.shape[0], :]
-        return x
-
-
-class MLP(nn.Module):
-    def __init__(self, input_size, output_size, device='cpu'):
-        super(MLP, self).__init__()
-        self.layers=nn.Linear(input_size, output_size)
-        self.device=device
-        self.to(device)
-        
-    def forward(self,x):
-        output=x
-        return(self.layers(output)) 
 
 class MLForecast(nn.Module) :
     def __init__(self, forecast_size, backast_size, device='cpu') :
         super(MLForecast, self).__init__()
-        self.MLP=MLP(backast_size, forecast_size, device)
+        self.MLP=nn.Linear(backast_size, forecast_size)
         self.to(device)
 
     def forward(self, x):
@@ -249,8 +171,8 @@ class MLForecast(nn.Module) :
 class Decoder(nn.Module) :
     def __init__(self, ninp, nout, forecast_size, backast_size, device='cpu') :
        super(Decoder, self).__init__()
-       self.MLP=MLP(ninp, nout, device)
-       self.MLF=MLP(backast_size,forecast_size, device)
+       self.MLP=nn.Linear(ninp, nout)
+       self.MLF=nn.Linear(backast_size,forecast_size)
        self.to(device)
 
     def forward(self,x,verbose=False):
@@ -272,7 +194,7 @@ class Time2Vec(nn.Module) : # this version will work if n=1
         self.to(device)
         
     def forward(self, x) :
-        time=torch.tensor(ld.normalize_data(np.arange(x.shape[0])), dtype=torch.float, device=self.device)
+        time=torch.tensor(normalize_data(np.arange(x.shape[0])), dtype=torch.float, device=self.device)
         output=self.fc1(self.l1(time.unsqueeze(1)))
         return(output)
 
@@ -289,8 +211,12 @@ class Encoder(nn.Module) : #built for n=1
         t2vec=self.t2v(x)
         t2vec_=torch.zeros((x.shape[1],x.shape[0],2)).to(self.device) #python refuse l'addition si les dimensions 1 et 2 ne correspondent pas
         t2vec_=t2vec_+t2vec #l'addition passe mais il reste a transposer
-        output=self.fc1(torch.cat((x,t2vec_.transpose(0,1)), dim=2)) #on cat sur n
-        print('---------output.shape----------', output.shape)
+        inpu=torch.cat((x,t2vec_.transpose(0,1)), dim=2) #on cat sur n
+        
+        
+        output=self.fc1(inpu)
+        
+        
         return(output)
                     
         
