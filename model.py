@@ -130,11 +130,12 @@ class TransformerModel(nn.Module):
         train_loss=self.evaluate(x_train, y_train, batch_size, filename, True)
         store_loss[0]=train_loss
         store_test_loss[0]=test_loss
+        time_=np.zeros(epochs)
         print('test loss--------- : {}'.format(test_loss))
         print('train loss-------- : {}'.format(train_loss))
         np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
         np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
-       
+        t0=time.time()
             
         for epoch in range(1, epochs):
             x_train, y_train=shuffle_in_unison(x_train,y_train)
@@ -156,7 +157,7 @@ class TransformerModel(nn.Module):
             print('train loss-------- : {}'.format(train_loss))
             np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
             np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
-            
+            time_[epochs]=time.time()-t0
 
 
 class MLForecast(nn.Module) :
