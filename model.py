@@ -10,23 +10,27 @@ from load_data import *
 
 class TransformerModel(nn.Module):
 
-    def __init__(self, ninp, nhead, nhid, nlayers, backast_size, forecast_size, dropout=0.5, device=torch.device('cpu')):
+    def __init__(self, ninp, nhead, nhid, nlayers, backast_size, forecast_size, pos_encod, dropout=0.5, device=torch.device('cpu')):
         super(TransformerModel, self).__init__()
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
-        self.model_type = 'Transformer'
         self.embed_dims=ninp*nhead
         self.device = device
         encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout, activation='gelu')
 
         self.encoder=nn.Linear(ninp, self.embed_dims)
+
+        self.pos_encod=pos_encod
+        if pos_encod :
+            self.pos_encoder=PositionnalEncoding(self.embed_dims, device, dropout=dropout)
+
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)       
-        self.decoder=Decoder(self.embed_dims, ninp, forecast_size,backast_size,device=device)
+        self.decoder=Decoder(self.embed_dims, ninp, forecast_size, backast_size, device=device)
 
 
         self.parameters = []
         self.parameters = nn.ParameterList(self.parameters)
         
-        self.optimizer=torch.optim.Adam(self.parameters(),lr=1e-3,betas=(0.9,0.98))
+        self.optimizer=torch.optim.Adam(self.parameters(),lr=1e-5)
         self._loss=F.l1_loss
 
         self.to(self.device)
@@ -35,8 +39,10 @@ class TransformerModel(nn.Module):
 
     def forward(self, input):
         input=input.to(self.device)
-        
         input = self.encoder(input)
+
+        if self.pos_encod :
+            input=self.pos_encoder(input)
 
         output = self.transformer_encoder(input)
 
@@ -119,7 +125,7 @@ class TransformerModel(nn.Module):
         return(mean_loss)
 
 
-    def fit(self, x_train, y_train, x_test, y_test, batch_size, epochs, filename, save=True, verbose=False):
+    def fit(self, x_train, y_train, x_test, y_test, batch_size, epochs, filename):
         store_test_loss=np.zeros(epochs)
         store_loss=np.zeros(epochs)
 
@@ -158,6 +164,28 @@ class TransformerModel(nn.Module):
             np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
             
 
+class PositionnalEncoding(nn.Module):
+
+    def __init__(self, d_model, device, dropout=0.1, max_len=5000) :
+        super(PositionnalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+#        pe[:, 0::2] = torch.sin(position)
+        pe[:, 1::2] = torch.cos(position * div_term)
+#        pe[:, 1::2] = torch.cos(position)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+        self.device=device
+
+    def forward(self, x):
+        pencod=self.pe[:x.shape[0], :].to(self.device)
+        x = x + self.pe[:x.shape[0], :]
+        return x
 
 class MLForecast(nn.Module) :
     def __init__(self, forecast_size, backast_size, device='cpu') :
