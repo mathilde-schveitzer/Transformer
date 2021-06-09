@@ -17,10 +17,10 @@ class NBeatsNet(nn.Module):
     def __init__(self,
                  ninp,
                  device=torch.device('cpu'),
-                 block_types=(GENERIC_BLOCK,),
+                 block_types=(GENERIC_BLOCK,GENERIC_BLOCK),
                  forecast_length=5,
                  backcast_length=10,
-                 thetas_dim=(128,),
+                 thetas_dim=(128,128),
                  hidden_layer_units=128,
                  block_type='fully_connected',
                  nb_harmonics=None):
@@ -72,11 +72,13 @@ class NBeatsNet(nn.Module):
         train_loss=self.evaluate(x_train, y_train, batch_size, filename, True)
         store_loss[0]=train_loss
         store_test_loss[0]=test_loss
+        time_=np.zeros(epochs)
         print('test loss--------- : {}'.format(test_loss))
         print('train loss-------- : {}'.format(train_loss))
         np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
         np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
            
+        t0=time.time()
         
         for epoch in range(1,epochs):
             x_train, y_train=shuffle_in_unison(x_train,y_train)
@@ -99,7 +101,8 @@ class NBeatsNet(nn.Module):
             print('train loss-------- : {}'.format(train_loss))
             np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
             np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
-            
+            time_[epoch]=time.time()-t0
+            np.savetxt('./data/{}/time.txt'.format(filename), time_)
 
     def do_training(self, xtrain, ytrain) :
         self.train()
@@ -218,7 +221,7 @@ class Block(nn.Module):
             self.fc3 = nn.Linear(units*ninp, units*ninp)
             self.fc4 = nn.Linear(units*ninp, units*ninp)
         else :
-            self.TFC = TransformerModel(ninp,nhead=1, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.1, device=device)
+            self.TFC = TransformerModel(ninp,nhead=1, nhid=128, nlayers=4, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.1, device=device)
             self.fc= nn.Linear(backcast_length*ninp, units*ninp)
         self.device = device
         self.backcast_linspace, self.forecast_linspace = linear_space(backcast_length, forecast_length)

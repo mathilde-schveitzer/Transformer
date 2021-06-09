@@ -10,7 +10,7 @@ def main(name,storage,ninp,device='cpu'):
     # you dont need to create a directory for name since it has already been done
     
 
-    name_='transformer_pos_encod_{}'.format(storage)
+    name_='transformer_lpos_encod_{}'.format(storage)
 
     storage_path='./data/{}'.format(name_)
  
