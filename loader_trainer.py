@@ -59,8 +59,11 @@ def main(name,storage,ninp,device='cpu'):
  #   model_.fit(xtrain, ytrain, xtest, ytest, bsz, epochs, name2)
     
     elapsed_time=time.time()-start_time
- #   test_loss = model.evaluate(xtest, ytest, eval_bsz, storage, False, save=False)
- #   train_loss = model.evaluate(xtrain, ytrain, bsz, storage, True, save=False)
+    test_loss1 = model.evaluate(xtest[:,:,:ninp], ytest[:,:,:ninp], eval_bsz, name1, False, predict=True)
+    test_loss_ = model.evaluate(xtest[:,:,:ninp], ytest[:,:,:ninp], eval_bsz, name_, False, predict=True)
+    train_loss1 = model.evaluate(xtrain[:,:,:ninp], ytrain[:,:,:ninp], bsz, name1, True, predict=True)
+    test_loss_ =  model.evaluate(xtrain[:,:,:ninp], ytrain[:,:,:ninp], bsz, name_, True, predict=True)
+    
     # print('=' * 89)
     # print('| End of training | test loss {:5.2f} | train loss {:5.2f} | '.format(test_loss, train_loss))
     # print('=' * 89)

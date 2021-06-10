@@ -17,11 +17,11 @@ class NBeatsNet(nn.Module):
     def __init__(self,
                  ninp,
                  device=torch.device('cpu'),
-                 block_types=(GENERIC_BLOCK,),
+                 block_types=(GENERIC_BLOCK,GENERIC_BLOCK),
                  forecast_length=5,
                  backcast_length=10,
-                 thetas_dim=(128,),
-                 hidden_layer_units=128,
+                 thetas_dim=(8,8),
+                 hidden_layer_units=8,
                  block_type='fully_connected',
                  nb_harmonics=None):
         
@@ -132,21 +132,24 @@ class NBeatsNet(nn.Module):
                 total_loss=0
 
                       
-    def evaluate(self, xtest, ytest, bsz, name, train, save=False) :
+    def evaluate(self, xtest, ytest, bsz, name, train, predict=False) :
         self.eval()
         xtest_list=split(xtest, bsz)
         ytest_list=split(ytest, bsz)
         assert len(xtest_list)==len(ytest_list)
 
-        prediction=np.zeros_like(ytest)
+        if predict :
+            prediction=np.zeros_like(ytest)
         test_loss=[]
         for batch_id in range(len(xtest_list)) :
             data, targets = xtest_list[batch_id], ytest_list[batch_id]
             _,output=self(torch.tensor(data, dtype=torch.float).to(self.device))
             loss=self._loss(output, torch.tensor(targets, dtype=torch.float).to(self.device))
             test_loss.append(loss.item())
-            prediction[batch_id*output.shape[0]:(batch_id+1)*output.shape[0],:,:]=output.cpu().detach().numpy()
-        if save :
+            if predict :
+                print(output.shape)
+                prediction[batch_id*output.shape[0]:(batch_id+1)*output.shape[0],:,:]=output.cpu().detach().numpy()
+        if predict :
             if train :
                 print('train')
                 torch.save(prediction,'./data/{}/predictions_train.pt'.format(name))
@@ -218,7 +221,7 @@ class Block(nn.Module):
             self.fc3 = nn.Linear(units*ninp, units*ninp)
             self.fc4 = nn.Linear(units*ninp, units*ninp)
         else :
-            self.TFC = TransformerModel(ninp,nhead=1, nhid=128, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.1, device=device)
+            self.TFC = TransformerModel(ninp,nhead=1, nhid=64, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.1, device=device)
             self.fc= nn.Linear(backcast_length*ninp, units*ninp)
         self.device = device
         self.backcast_linspace, self.forecast_linspace = linear_space(backcast_length, forecast_length)
