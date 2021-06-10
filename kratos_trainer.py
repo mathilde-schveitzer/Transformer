@@ -21,8 +21,8 @@ def main(name,nlimit,device='cpu'):
 
     print(data_set.shape)
     
-    backcast_length=100
-    forecast_length=100
+    backcast_length=200
+    forecast_length=200
     step=10
 
     x,y = get_data(backcast_length, forecast_length, step, data_set) # x=[Nechantillon][b_l][Ndim]

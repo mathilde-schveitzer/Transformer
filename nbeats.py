@@ -147,7 +147,6 @@ class NBeatsNet(nn.Module):
             loss=self._loss(output, torch.tensor(targets, dtype=torch.float).to(self.device))
             test_loss.append(loss.item())
             if predict :
-                print(output.shape)
                 prediction[batch_id*output.shape[0]:(batch_id+1)*output.shape[0],:,:]=output.cpu().detach().numpy()
         if predict :
             if train :
