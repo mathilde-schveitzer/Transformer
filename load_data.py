@@ -155,21 +155,17 @@ def read_signal(filename) :
                  x=np.vstack((x,time_series))
     return(x)
 
-def read_NASA_signal(filename) :
-    "The only difference with the code below is that we do not have to switch the first column with NASA dataset"
+def read_nasa_signal(filename) :
+    "nasa signal are one column with all datas"
     with open(filename, newline='') as csvfile :
-         reader=csv.reader(csvfile, delimiter=',')
-         for n,row in enumerate(reader) :
-             if n==0 :
-                 length=len(row)
-                 x=np.zeros((0,length-1))
-             else :
-                 time_series=np.zeros((1,length-1))
-                 for k,column in enumerate(row) :
-                     time_series[0,k-1]=column
-                    
-                 x=np.vstack((x,time_series))
+        reader=csv.reader(csvfile, delimiter=',')
+        x=np.zeros((0,1))
+        time_series=np.zeros((1,1))
+        for row in reader :
+           time_series[0,0]=float(row[0])
+           x=np.vstack((x,time_series))
     return(x)
+            
 
 def register_training_signal(nlimit) :
 
