@@ -6,21 +6,27 @@ from nbeats import *
 import os
 
 
-def main(name,nlimit):
+def main(name,id):
+
+    filename='NASA/train/{}.csv'.format(id)
+    filename_='NASA/test/{}.csv'.format(id)
     
-    data_set=register_training_signal(nlimit).transpose() #[time_step]x[dim] > [dim]x[time_step]
+    data_set=read_nasa_signal(filename)
+    data_set_=read_nasa_signal(filename_)
 
-   # data_set=np.expand_dims(data_set[-1,:],0) # comment if you want the [0,nlimit] signals
+    path='./data/{}'.format(name)
+    if not os.path.exists(path) :
+        os.makedirs(path)
 
-    if data_set.shape[0]==1 :
-        data_set=normalize_data(data_set)
-    else :
-        data_set=normalize_datas(data_set)
-
+    np.savetxt('./data/{}/data_train.txt'.format(name), data_set) #in order to plot it easily
     print(data_set.shape)
+    print(data_set_.shape)
+    data_set=np.vstack((data_set,data_set_))
     
-    backcast_length=200
-    forecast_length=200
+    data_set=normalize_datas(data_set.transpose())  #[time_step]x[dim] > [dim]x[time_step]
+                       
+    backcast_length=100
+    forecast_length=100
     step=10
 
     x,y = get_data(backcast_length, forecast_length, step, data_set) # x=[Nechantillon][b_l][Ndim]
@@ -32,10 +38,9 @@ def main(name,nlimit):
     print(xtest.shape)
     print(ytest.shape)
 
-    path='./data/{}'.format(name)
+
     
-    if not os.path.exists(path) :
-        os.makedirs(path)
+    
 
     
     torch.save(xtrain,'./data/{}/xtrain.pt'.format(name))
@@ -50,6 +55,6 @@ def main(name,nlimit):
 if __name__ == '__main__':
    parser=argparse.ArgumentParser()
    parser.add_argument('name', help='The name of the folder in which out data will be saved')
-   parser.add_argument('nlimit', help='number of signals which will be stored')
+   parser.add_argument('id', help='the few strings that enable to identify the file you want to analyze')
    args=parser.parse_args()
-   main(args.name, int(args.nlimit))
+   main(args.name, args.id)

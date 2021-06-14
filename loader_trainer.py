@@ -36,7 +36,7 @@ def main(name,storage,ninp,device='cpu'):
     print(xtest.shape)
     print('ok : we start to load the model')
     
-    epochs=500
+    epochs=250
     bsz=50
     eval_bsz=50
     backcast_length=100 #do not change until you load an other set of data

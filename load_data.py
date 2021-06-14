@@ -155,6 +155,17 @@ def read_signal(filename) :
                  x=np.vstack((x,time_series))
     return(x)
 
+def read_nasa_signal(filename) :
+    "nasa signal are one column with all datas"
+    with open(filename, newline='') as csvfile :
+        reader=csv.reader(csvfile, delimiter=',')
+        x=np.zeros((0,1))
+        time_series=np.zeros((1,1))
+        for row in reader :
+           time_series[0,0]=float(row[0])
+           x=np.vstack((x,time_series))
+    return(x)
+            
 def register_training_signal(nlimit) :
 
     #load only the id column
