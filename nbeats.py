@@ -189,14 +189,6 @@ def seasonality_model(thetas, t, device):
     S = torch.cat([s1, s2])
     return thetas.mm(S.to(device))
 
-
-def trend_model(thetas, t, device):
-    p = thetas.size()[-1]
-    assert p <= 4, 'thetas_dim is too big.'
-    T = torch.tensor([t ** i for i in range(p)]).float()
-    return thetas.mm(T.to(device))
-
-
 def linear_space(backcast_length, forecast_length):
     ls = np.arange(-backcast_length, forecast_length, 1) / forecast_length
     b_ls = ls[:backcast_length]
@@ -250,19 +242,6 @@ class SeasonalityBlock(Block):
         backcast = seasonality_model(self.theta_b_fc(x), self.backcast_linspace, self.device)
         forecast = seasonality_model(self.theta_f_fc(x), self.forecast_linspace, self.device)
         
-        return backcast, forecast
-
-
-class TrendBlock(Block):
-
-    def __init__(self, units, thetas_dim, device, backcast_length=10, forecast_length=5, nb_harmonics=None):
-        super(TrendBlock, self).__init__(units, thetas_dim, device, backcast_length,
-                                         forecast_length)
-
-    def forward(self, x):
-        x = super(TrendBlock, self).forward(x)
-        backcast = trend_model(self.theta_b_fc(x), self.backcast_linspace, self.device)
-        forecast = trend_model(self.theta_f_fc(x), self.forecast_linspace, self.device)
         return backcast, forecast
 
 
