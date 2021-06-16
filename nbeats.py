@@ -17,10 +17,10 @@ class NBeatsNet(nn.Module):
     def __init__(self,
                  ninp,
                  device=torch.device('cpu'),
-                 block_types=(GENERIC_BLOCK, GENERIC_BLOCK, GENERIC_BLOCK, GENERIC_BLOCK),
+                 block_types=(GENERIC_BLOCK, GENERIC_BLOCK),
                  forecast_length=5,
                  backcast_length=10,
-                 thetas_dim=(128,128,128,128),
+                 thetas_dim=(128,128),
                  hidden_layer_units=128,
                  block_type='fully_connected',
                  nb_harmonics=None):
@@ -251,18 +251,13 @@ class GenericBlock(Block): # je pourrais faire theta_dims=theta_dims*ninp
         super(GenericBlock, self).__init__(ninp, units, thetas_dim, device, backcast_length, forecast_length, block_type)
         self.backcast_fc = nn.Linear(thetas_dim*ninp, backcast_length*ninp)
         self.forecast_fc = nn.Linear(thetas_dim*ninp, forecast_length*ninp)
-        self.ftr = TransformerModel(ninp, nhead=2, nhid=64, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.1, device=device)
-
+       
     def forward(self, x):
         # no constraint for generic arch.
         x = super(GenericBlock, self).forward(x)
         theta_b = F.relu(self.theta_b_fc(x))
-        theta_f = F.relu(self.theta_f_fc(x))
-        if self.block_type=='fully_connected' :
-            backcast = self.backcast_fc(theta_b)  # generic. 3.3.
-            forecast = self.forecast_fc(theta_f)  # generic. 3.3.
-        else :
-            theta_f=theta_f.reshape((theta_f.shape[0],thetas_dim,ninp))
-            tr_forecast=self.ftr(theta_f.transpose(0,1))
-            forecast=self.forecast_fc(tr_forecast.reshape(tr_forecast.shape[0],tr_forecast.shape[1]*tr_forecast.shape[2]))
+        theta_f = F.relu(self.theta_f_fc(x))        
+        backcast = self.backcast_fc(theta_b)  # generic. 3.3.
+        forecast = self.forecast_fc(theta_f)  # generic. 3.3.
+
         return backcast, forecast
