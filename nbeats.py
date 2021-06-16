@@ -20,8 +20,8 @@ class NBeatsNet(nn.Module):
                  block_types=(GENERIC_BLOCK, GENERIC_BLOCK),
                  forecast_length=5,
                  backcast_length=10,
-                 thetas_dim=(128,128),
-                 hidden_layer_units=128,
+                 thetas_dim=(64,64),
+                 hidden_layer_units=64,
                  block_type='fully_connected',
                  nb_harmonics=None):
         
@@ -171,13 +171,18 @@ class NBeatsNet(nn.Module):
 
     def forward(self, backcast):
         forecast = torch.zeros(size=(backcast.size()[0], self.forecast_length, backcast.size()[-1]))  # maybe batch size here.
+        forecast_storage=torch.zeros(size=(backcast.size()[0]*len(self.stack),self.forecast_length, backcast.size()[-1])).to(self.device)
+        
         for block_id in range(len(self.stack)):
+
             b, f = self.stack[block_id](backcast)
             b=b.reshape((b.shape[0], self.backcast_length, self.ninp))
             f=f.reshape((f.shape[0], self.forecast_length, self.ninp))
             backcast = backcast.to(self.device) - b
             forecast = forecast.to(self.device) + f
-        return backcast, forecast
+            forecast_storage[block_id*b.shape[0]:(block_id+1)*b.shape[0],:,:]=f.to(self.device)
+            
+        return forecast_storage, forecast
 
 
 def seasonality_model(thetas, t, device):
