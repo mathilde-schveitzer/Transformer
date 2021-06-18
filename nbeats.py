@@ -115,7 +115,7 @@ class NBeatsNet(nn.Module):
             self._opt.zero_grad()
             _, forecast = self(torch.tensor(data, dtype=torch.float).to(self.device))
            
-            loss = self._loss(forecast,torch.tensor(targets, dtype=torch.float).to(self.device))
+            loss = self._loss(forecast.reshape(-1),torch.tensor(targets, dtype=torch.float).reshape(-1).to(self.device))
             total_loss+=loss.item()
             loss.backward()
             self._opt.step()
@@ -144,14 +144,14 @@ class NBeatsNet(nn.Module):
         for batch_id in range(len(xtest_list)) :
             data, targets = xtest_list[batch_id], ytest_list[batch_id]
             _,output=self(torch.tensor(data, dtype=torch.float).to(self.device))
-            loss=self._loss(output, torch.tensor(targets, dtype=torch.float).to(self.device))
+            loss=self._loss(output.reshape(-1), torch.tensor(targets, dtype=torch.float).reshape(-1).to(self.device))
             test_loss.append(loss.item())
             if predict :
                 prediction[batch_id*output.shape[0]:(batch_id+1)*output.shape[0],:,:]=output.cpu().detach().numpy()
         if predict :
             if train :
                 print('train')
-                torch.save(prediction,'./data/{}/predictions_train.pt'.format(name))
+                torch.save(prediction,'./data/{}/predictions_train.pt'.format(name)) # 3D array
             else :
                 print('test')
                 torch.save(prediction, './data/{}/predictions_test.pt'.format(name))

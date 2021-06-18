@@ -32,11 +32,13 @@ def main(name,storage,ninp,device='cpu'):
     ytrain=torch.load('./data/{}/ytrain.pt'.format(name))
     xtest=torch.load('./data/{}/xtest.pt'.format(name))
     ytest=torch.load('./data/{}/ytest.pt'.format(name))
+
+    
     print(xtrain.shape)
     print(xtest.shape)
     print('ok : we start to load the model')
     
-    epochs=250
+    epochs=259
     bsz=50
     eval_bsz=50
     backcast_length=100 #do not change until you load an other set of data
@@ -44,6 +46,11 @@ def main(name,storage,ninp,device='cpu'):
 
     ninp+=1
 
+    # x_train=xtrain[:,:,:ninp]
+    # y_train=ytrain[:,:,:ninp]
+    # x_test=xtest[:,:,:ninp]
+    # y_test=ytest[:,:,:ninp]
+    
     model=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length,block_type='fully_connected')
     model__=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length,block_type='Tr')
 #    model_=TransformerModel(ninp, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.5, device=device)
@@ -57,12 +64,20 @@ def main(name,storage,ninp,device='cpu'):
     model.fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], name1, epochs=epochs, batch_size=bsz)
     model__.fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], name_, epochs=epochs, batch_size=bsz)
  #   model_.fit(xtrain, ytrain, xtest, ytest, bsz, epochs, name2)
+    xtrain=torch.load('./data/{}/xtrain.pt'.format(name))
+    ytrain=torch.load('./data/{}/ytrain.pt'.format(name))
+    xtest=torch.load('./data/{}/xtest.pt'.format(name))
+    ytest=torch.load('./data/{}/ytest.pt'.format(name))
+    x_train=xtrain[:,:,:ninp]
+    y_train=ytrain[:,:,:ninp]
+    x_test=xtest[:,:,:ninp]
+    y_test=ytest[:,:,:ninp]
     
     elapsed_time=time.time()-start_time
-    test_loss1 = model.evaluate(xtest[:,:,:ninp], ytest[:,:,:ninp], eval_bsz, name1, False, predict=True)
-    test_loss_ = model__.evaluate(xtest[:,:,:ninp], ytest[:,:,:ninp], eval_bsz, name_, False, predict=True)
-    train_loss1 = model.evaluate(xtrain[:,:,:ninp], ytrain[:,:,:ninp], bsz, name1, True, predict=True)
-    test_loss_ =  model__.evaluate(xtrain[:,:,:ninp], ytrain[:,:,:ninp], bsz, name_, True, predict=True)
+    test_loss1 = model.evaluate(x_test, y_test, eval_bsz, name1, False, predict=True)
+    test_loss_ = model__.evaluate(x_test, y_test, eval_bsz, name_, False, predict=True)
+    train_loss1 = model.evaluate(x_train, y_train, bsz, name1, True, predict=True)
+    test_loss_ =  model__.evaluate(x_train, y_train, bsz, name_, True, predict=True)
     
     # print('=' * 89)
     # print('| End of training | test loss {:5.2f} | train loss {:5.2f} | '.format(test_loss, train_loss))
