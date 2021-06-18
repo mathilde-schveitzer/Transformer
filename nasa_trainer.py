@@ -25,8 +25,8 @@ def main(name,id):
     
     data_set=normalize_datas(data_set.transpose())  #[time_step]x[dim] > [dim]x[time_step]
                        
-    backcast_length=100
-    forecast_length=100
+    backcast_length=50
+    forecast_length=50
     step=10
 
     x,y = get_data(backcast_length, forecast_length, step, data_set) # x=[Nechantillon][b_l][Ndim]
@@ -37,11 +37,6 @@ def main(name,id):
     print(ytrain.shape)
     print(xtest.shape)
     print(ytest.shape)
-
-
-    
-    
-
     
     torch.save(xtrain,'./data/{}/xtrain.pt'.format(name))
     torch.save(ytrain,'./data/{}/ytrain.pt'.format(name))

@@ -41,15 +41,10 @@ def main(name,storage,ninp,device='cpu'):
     epochs=259
     bsz=50
     eval_bsz=50
-    backcast_length=100 #do not change until you load an other set of data
-    forecast_length=100
+    backcast_length=50 #do not change until you load an other set of data
+    forecast_length=50
 
     ninp+=1
-
-    # x_train=xtrain[:,:,:ninp]
-    # y_train=ytrain[:,:,:ninp]
-    # x_test=xtest[:,:,:ninp]
-    # y_test=ytest[:,:,:ninp]
     
     model=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length,block_type='fully_connected')
     model__=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length,block_type='Tr')
@@ -64,6 +59,7 @@ def main(name,storage,ninp,device='cpu'):
     model.fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], name1, epochs=epochs, batch_size=bsz)
     model__.fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], name_, epochs=epochs, batch_size=bsz)
  #   model_.fit(xtrain, ytrain, xtest, ytest, bsz, epochs, name2)
+    # load them a second time since they have been modified by the shuffled methods called in fit 
     xtrain=torch.load('./data/{}/xtrain.pt'.format(name))
     ytrain=torch.load('./data/{}/ytrain.pt'.format(name))
     xtest=torch.load('./data/{}/xtest.pt'.format(name))
