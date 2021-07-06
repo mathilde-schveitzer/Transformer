@@ -41,8 +41,8 @@ def main(name,storage,ninp,device='cpu'):
     epochs=259
     bsz=50
     eval_bsz=50
-    backcast_length=50 #do not change until you load an other set of data
-    forecast_length=50
+    backcast_length=100 #do not change until you load an other set of data
+    forecast_length=100
 
     ninp+=1
     
