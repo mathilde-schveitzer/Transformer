@@ -20,7 +20,7 @@ class TransformerModel(nn.Module):
         self.device = device
         encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout, activation='gelu')
         if t2v :
-            self.encoder=Encoder(ninp, self.embed_dims, hidden_dim=128, device=device)
+            self.encoder=Encoder(ninp, self.embed_dims, hidden_dim=256, device=device)
         else :
             self.encoder=nn.Linear(ninp, self.embed_dims)
 

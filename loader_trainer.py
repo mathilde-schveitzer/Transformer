@@ -41,8 +41,8 @@ def main(name,storage,ninp,device='cpu'):
 
     ninp+=1
 
-    model=TransformerModel(1, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.5, t2v=True, device=device)
-    model_=TransformerModel(1, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.5, t2v=False, device=device)
+    model=TransformerModel(ninp, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=True, device=device)
+    model_=TransformerModel(ninp, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=False, device=device)
 
     
     print("Model structure: ", model, "\n\n")
@@ -51,9 +51,9 @@ def main(name,storage,ninp,device='cpu'):
 
     start_time=time.time()
     print(xtrain[:ninp].shape)
-    model.fit(xtrain[:,:,ninp-1:ninp], ytrain[:,:,ninp-1:ninp], xtest[:,:,ninp-1:ninp], ytest[:,:,ninp-1:ninp], bsz, epochs, name_)
+    model.fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], bsz, epochs, name_)
     elapsed_time=time.time()-start_time
-    model_.fit(xtrain[:,:,ninp-1:ninp], ytrain[:,:,ninp-1:ninp], xtest[:,:,ninp-1:ninp], ytest[:,:,ninp-1:ninp], bsz, epochs, name2)
+    model_.fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], bsz, epochs, name2)
     elapsed_time_=time.time()-elapsed_time
     
    
