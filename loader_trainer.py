@@ -12,11 +12,11 @@ def main(name,storage,ninp,device='cpu'):
 
     name_='nbeats_tr_{}'.format(storage)
     name1='nbeats_fc_{}'.format(storage)
-  #  name2='transformer_{}'.format(storage)
+    name2='transformer_{}'.format(storage)
 
     storage_path='./data/{}'.format(name_)
     storage_path_='./data/{}'.format(name1)
- #   storage_path__='./data/{}'.format(name2)
+    storage_path__='./data/{}'.format(name2)
 
     if not os.path.exists(storage_path) :
         os.makedirs(storage_path)
@@ -24,8 +24,8 @@ def main(name,storage,ninp,device='cpu'):
     if not os.path.exists(storage_path_) :
         os.makedirs(storage_path_)
 
-  #  if not os.path.exists(storage_path__) :
-  #      os.makedirs(storage_path__)
+    if not os.path.exists(storage_path__) :
+        os.makedirs(storage_path__)
 
 
     xtrain=torch.load('./data/{}/xtrain.pt'.format(name))
@@ -38,7 +38,7 @@ def main(name,storage,ninp,device='cpu'):
     print(xtest.shape)
     print('ok : we start to load the model')
     
-    epochs=259
+    epochs=1000
     bsz=50
     eval_bsz=50
     backcast_length=100 #do not change until you load an other set of data
@@ -48,7 +48,7 @@ def main(name,storage,ninp,device='cpu'):
     
     model=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length,block_type='fully_connected')
     model__=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length,block_type='Tr')
-#    model_=TransformerModel(ninp, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.5, device=device)
+    model_=TransformerModel(ninp, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
 
     
     print("Model structure: ", model__, "\n\n")
@@ -58,7 +58,7 @@ def main(name,storage,ninp,device='cpu'):
     start_time=time.time()
     model.fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], name1, epochs=epochs, batch_size=bsz)
     model__.fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], name_, epochs=epochs, batch_size=bsz)
- #   model_.fit(xtrain, ytrain, xtest, ytest, bsz, epochs, name2)
+    model_.fit(xtrain, ytrain, xtest, ytest, bsz, epochs, name2)
     # load them a second time since they have been modified by the shuffled methods called in fit 
     xtrain=torch.load('./data/{}/xtrain.pt'.format(name))
     ytrain=torch.load('./data/{}/ytrain.pt'.format(name))
