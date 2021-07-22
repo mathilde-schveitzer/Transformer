@@ -91,7 +91,6 @@ class TransformerModel(nn.Module):
             time_[epochs]=time.time()-t0
 
 # subsidiary function, called by fit
-
     def do_training(self,xtrain,ytrain):
         self.train() # Turn on the train mode (herited from module)
         total_loss = 0.

@@ -10,12 +10,12 @@ from load_data import *
 
 class TransformerModel(nn.Module):
 
-    def __init__(self, backast_size, forecast_size, quantiles, ninp=1, nout=1, nhead=2, nhid=128, nlayers=2, dropout=0.2, device=torch.device('cpu')):
+    def __init__(self, backast_size, forecast_size, quantiles, ninp=1, nout=1, nhead=2, nhid=128, nlayers=2, dropout=0.1, device=torch.device('cpu')):
         super(TransformerModel, self).__init__()
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
         self.model_type = 'Transformer'
         self.embed_dims=ninp*nhead
-        self.device = device
+        self.device=device
         encoder_layers = TransformerEncoderLayer(self.embed_dims, nhead, nhid, dropout, activation='gelu')
         self.encoder=nn.Linear(ninp, self.embed_dims)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
@@ -26,7 +26,7 @@ class TransformerModel(nn.Module):
         self.parameters = []
         self.parameters = nn.ParameterList(self.parameters)
         
-        self.to(self.device)
+        self.to(device)
         
         print('|T R A N S F O R M E R : Optimus Prime is ready |')
 
@@ -41,15 +41,15 @@ class TransformerModel(nn.Module):
 class Decoder(nn.Module) :
     def __init__(self, ninp, nout, forecast_size, backast_size, device='cpu') :
        super(Decoder, self).__init__()
-       self.MLP=nn.Linear(ninp, nout)
+       self.MLP=nn.Linear(ninp,nout)
       # self.MLF=nn.Linear(backast_size,forecast_size)
        self.to(device)
 
     def forward(self,x,verbose=False):
-        x=self.MLP(x)
+        output=self.MLP(x)
         if verbose :
             print('encoder input :', x.shape)
-       # output=self.MLF(x.transpose(0,2))
+       # output=self.MLF(output.transpose(0,2))
         if verbose :
             print('encoder output :', output.shape)            
         return(output.transpose(0,2))
@@ -78,14 +78,14 @@ fks=100
 batch_size=50
 step=10
 device='cuda:1'
-model=TransformerModel(bks,fks,quantiles,device=device)
+model=TransformerModel(bks,fks,quantiles, nlayers=1, nhid=128, device=device)
 optimizer=torch.optim.Adam(model.parameters(),lr=1e-2)
-name='test1'
+name='test2'
 
 # get the data
 
 data_set=register_training_signal(0).transpose()  #[time_step]x[dim] > [dim]x[time_step]y
-data_set=normalize_datas(data_set) 
+data_set=normalize_datas(data_set)
 x_train, y_train = get_data(bks, fks, step, data_set)
 print('|------------------ xtrain.shape : {} | ', x_train.shape)
 print('|------------------ ytrain.shape : {} | ', y_train.shape)
@@ -99,8 +99,8 @@ if not os.path.exists(path) :
 # Loss for each session :
 losses=[QuantileLoss(tau) for tau in quantiles]
 
-epochs=500
-log_epoch=1
+epochs=1000
+log_epoch=10
 store_loss=np.zeros(epochs)
 
 print('| R E A D Y  T O  T R A I N : VROUM  VROUM |')
@@ -140,4 +140,5 @@ for epoch in range(epochs) :
         
 # save the model so obtained
 
-torch.save(model, './data/{}_model'.format(name))
+torch.save(model.state_dict(), './data/{}/mymodel.pt'.format(name))
+print('2')
