@@ -41,8 +41,8 @@ def main(name,nlimit):
     torch.save(xtrain,'./data/{}/xtrain.pt'.format(name))
     torch.save(ytrain,'./data/{}/ytrain.pt'.format(name))
     torch.save(ytest,'./data/{}/ytest.pt'.format(name))
-    torch.save(xtest,'./data/{}/xtest.pt'.format(name))
 
+    torch.save(xtest,'./data/{}/xtest.pt'.format(name))
     print('---------- Name of the file : {} --------------'.format(name))
 
 

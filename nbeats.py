@@ -16,7 +16,7 @@ class NBeatsNet(nn.Module):
     SEASONALITY_BLOCK = 'seasonality'
     TREND_BLOCK = 'trend'
     GENERIC_BLOCK = 'generic'
-
+    
     def __init__(self,
                  ninp,
                  device=torch.device('cpu'),
@@ -30,6 +30,11 @@ class NBeatsNet(nn.Module):
         
         super(NBeatsNet, self).__init__()
 
+        if block_type=='fully_connected' :
+            self.model_type='NBeats with fully connected layers'
+        else :
+            self.model_type='NBeats with Transformer'
+        
         self.ninp=ninp
         self.forecast_length = forecast_length
         self.backcast_length = backcast_length
@@ -144,8 +149,10 @@ class NBeatsNet(nn.Module):
 
         if predict :
             prediction=np.zeros_like(ytest)
+
         test_loss=[]
         for batch_id in range(len(xtest_list)) :
+
             data, targets = xtest_list[batch_id], ytest_list[batch_id]
             _,output=self(torch.tensor(data, dtype=torch.float).to(self.device))
             loss=self._loss(output.reshape(-1), torch.tensor(targets, dtype=torch.float).reshape(-1).to(self.device))
@@ -218,13 +225,12 @@ class Block(nn.Module):
         self.forecast_length = forecast_length
         self.block_type=block_type
         if self.block_type=='fully_connected' :
-            self.TFC=None
             self.fc1 = nn.Linear(backcast_length*ninp, units*ninp)
             self.fc2 = nn.Linear(units*ninp, units*ninp)
             self.fc3 = nn.Linear(units*ninp, units*ninp)
             self.fc4 = nn.Linear(units*ninp, units*ninp)
         else :
-            self.TFC = TransformerModel(ninp,nhead=1, nhid=128, nlayers=4, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.1, device=device)
+            self.TFC = TransformerModel(ninp,nhead=1, nhid=128, nlayers=4, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.1, t2v=False, device=device)
             self.fc= nn.Linear(backcast_length*ninp, units*ninp)
         self.device = device
         self.backcast_linspace, self.forecast_linspace = linear_space(backcast_length, forecast_length)

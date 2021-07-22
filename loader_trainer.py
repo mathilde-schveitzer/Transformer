@@ -5,83 +5,79 @@ import argparse
 import torch
 from nbeats import *
 
-def main(name,storage,ninp,device='cpu'):
+def main(data_name,storage,ninp,device='cpu'):
 
-    # you dont need to create a directory for name since it has already been done
+# create a list containing the names of the models :
     
+    name_NBTR='nbeats_tr_{}'.format(storage)
+    name_NBFC='nbeats_fc_{}'.format(storage)
+    name_TR='transformer_{}'.format(storage)
+    name_TRT2V='transformer_t2v_{}'.format(storage)
 
-    name_='nbeats_tr_{}'.format(storage)
-    name1='nbeats_fc_{}'.format(storage)
-    name2='transformer_{}'.format(storage)
+    names=[name_NBTR,name_NBFC,name_TR,name_TRT2V]
 
-    storage_path='./data/{}'.format(name_)
-    storage_path_='./data/{}'.format(name1)
-    storage_path__='./data/{}'.format(name2)
+# create the directory in which the results will be saved :
 
-    if not os.path.exists(storage_path) :
-        os.makedirs(storage_path)
+    storage_paths=['./data/{}'.format(name) for name in names]
 
-    if not os.path.exists(storage_path_) :
-        os.makedirs(storage_path_)
+    for k in range(len(storage_paths)) :
+        if not os.path.exists(storage_paths[k]) :
+            os.makedirs(storage_paths[k])
 
-    if not os.path.exists(storage_path__) :
-        os.makedirs(storage_path__)
+    xtrain=torch.load('./data/{}/xtrain.pt'.format(data_name))
+    ytrain=torch.load('./data/{}/ytrain.pt'.format(data_name))
+    xtest=torch.load('./data/{}/xtest.pt'.format(data_name))
+    ytest=torch.load('./data/{}/ytest.pt'.format(data_name))
 
+# hyperparameters fixed for training session :
 
-    xtrain=torch.load('./data/{}/xtrain.pt'.format(name))
-    ytrain=torch.load('./data/{}/ytrain.pt'.format(name))
-    xtest=torch.load('./data/{}/xtest.pt'.format(name))
-    ytest=torch.load('./data/{}/ytest.pt'.format(name))
-
-    
-    print(xtrain.shape)
-    print(xtest.shape)
-    print('ok : we start to load the model')
-    
-    epochs=1000
+    epochs=5
     bsz=50
     eval_bsz=50
-    backcast_length=100 #do not change until you load an other set of data
+    backcast_length=100 #to choose according to the set of data loaded above
     forecast_length=100
 
     ninp+=1
-    
-    model=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length,block_type='fully_connected')
-    model__=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length,block_type='Tr')
-    model_=TransformerModel(ninp, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, device=device)
 
+# creating the models
+    models=[]
+    model=None
     
-    print("Model structure: ", model__, "\n\n")
-    for layer_name, param in model__.named_parameters():
-        print(f"Layer: {layer_name} | Size: {param.size()} \n")
+    model=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length, block_type='fully_connected')
+    models.append(model)
+    model_=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length, block_type='Tr')
+    models.append(model)
+    model=TransformerModel(ninp, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=False, device=device)
+    models.append(model)
+    model=TransformerModel(ninp, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=True, device=device)
+    models.append(model)
+    
+    for x in models :
+        print("Model structure: ", x, "\n\n")
+    
+# training the NBeats models :
+    for k in range(2):
+        models[k].fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], names[k], epochs=epochs, batch_size=bsz)
 
-    start_time=time.time()
-    model.fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], name1, epochs=epochs, batch_size=bsz)
-    model__.fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], name_, epochs=epochs, batch_size=bsz)
-    model_.fit(xtrain, ytrain, xtest, ytest, bsz, epochs, name2)
-    # load them a second time since they have been modified by the shuffled methods called in fit 
-    xtrain=torch.load('./data/{}/xtrain.pt'.format(name))
-    ytrain=torch.load('./data/{}/ytrain.pt'.format(name))
-    xtest=torch.load('./data/{}/xtest.pt'.format(name))
-    ytest=torch.load('./data/{}/ytest.pt'.format(name))
+# training Transformer models :
+    for k in range(2,len(models)):
+        models[k].fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], bsz, epochs, names[k])
+
+# comment this part if you're not interested in visualizing what are the different models able to predict
+
+# load data a second time since they have been modified by the shuffled methods called in fit (annoying when reconstituting the whole signal)
+    xtrain=torch.load('./data/{}/xtrain.pt'.format(data_name))
+    ytrain=torch.load('./data/{}/ytrain.pt'.format(data_name))
+    xtest=torch.load('./data/{}/xtest.pt'.format(data_name))
+    ytest=torch.load('./data/{}/ytest.pt'.format(data_name))
     x_train=xtrain[:,:,:ninp]
     y_train=ytrain[:,:,:ninp]
     x_test=xtest[:,:,:ninp]
     y_test=ytest[:,:,:ninp]
     
-    elapsed_time=time.time()-start_time
-    test_loss1 = model.evaluate(x_test, y_test, eval_bsz, name1, False, predict=True)
-    test_loss_ = model__.evaluate(x_test, y_test, eval_bsz, name_, False, predict=True)
-    train_loss1 = model.evaluate(x_train, y_train, bsz, name1, True, predict=True)
-    test_loss_ =  model__.evaluate(x_train, y_train, bsz, name_, True, predict=True)
-    
-    # print('=' * 89)
-    # print('| End of training | test loss {:5.2f} | train loss {:5.2f} | '.format(test_loss, train_loss))
-    # print('=' * 89)
-    print('| DL Session took {} seconds |'.format(elapsed_time))    
-
-    print('---------- Name of the file : {} --------------'.format(storage))
-
+    for k in range(len(models)):
+        test_loss = models[k].evaluate(x_test, y_test, eval_bsz, names[k], False, predict=True)
+        train_loss = models[k].evaluate(x_test, y_test, eval_bsz, names[k], True, predict=True)
 
     
 if __name__ == '__main__':
