@@ -9,6 +9,9 @@ from torch.nn import functional as F
 from load_data import split, shuffle_in_unison
 from model import TransformerModel
 
+
+# ---- Definition du modele et des methodes permettant de l'entrainer
+
 class NBeatsNet(nn.Module):
     SEASONALITY_BLOCK = 'seasonality'
     TREND_BLOCK = 'trend'
@@ -59,15 +62,14 @@ class NBeatsNet(nn.Module):
             return TrendBlock
         else:
             return GenericBlock
+        
+# main function, training the model
 
     def fit(self, x_train, y_train, x_test, y_test, filename, epochs=10, batch_size=32):
         store_test_loss=np.zeros(epochs)
         store_loss=np.zeros(epochs)
         
-       
-        x_test_list=split(x_test, batch_size)
-        y_test_list =split(y_test, batch_size)
-
+    # first iteration is done separatedly    
         test_loss= self.evaluate(x_test, y_test, batch_size, filename, False)
         train_loss=self.evaluate(x_train, y_train, batch_size, filename, True)
         store_loss[0]=train_loss
@@ -79,18 +81,20 @@ class NBeatsNet(nn.Module):
            
         
         for epoch in range(1,epochs):
+
+        # shuffle before spliting in batch to avoid overfitting
             x_train, y_train=shuffle_in_unison(x_train,y_train)
             x_train_list = split(x_train, batch_size)
             y_train_list = split(y_train, batch_size)
-            
+
+        # keep an eye on what is happening
             log_epoch=1
             if epoch % log_epoch == 0 :
                 print('|---------------- Epoch noumero {} ----------|'.format(epoch))
 
-            epoch_start_time=time.time()
             self.do_training(x_train_list, y_train_list)
-            elapsed_time=time.time()-epoch_start_time
-            
+
+        # compute and store loss            
             test_loss= self.evaluate(x_test, y_test, batch_size, filename, False)
             train_loss=self.evaluate(x_train, y_train, batch_size, filename, True)
             store_loss[epoch]=train_loss
@@ -100,7 +104,7 @@ class NBeatsNet(nn.Module):
             np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
             np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
             
-
+# subsidiary function, called by fit
     def do_training(self, xtrain, ytrain) :
         self.train()
         total_loss=0.
