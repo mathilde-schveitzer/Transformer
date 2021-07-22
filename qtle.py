@@ -1,3 +1,4 @@
+import sys
 import os
 import numpy as np
 import torch
@@ -20,7 +21,7 @@ class TransformerModel(nn.Module):
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         self.decoders=[]
         for _ in quantiles :
-            decoder=Decoder(self.embed_dims, ninp, backast_size, forecast_size)
+            decoder=Decoder(self.embed_dims, ninp, backast_size, forecast_size, device=device)
             self.decoders.append(decoder)
         self.parameters = []
         self.parameters = nn.ParameterList(self.parameters)
@@ -41,14 +42,14 @@ class Decoder(nn.Module) :
     def __init__(self, ninp, nout, forecast_size, backast_size, device='cpu') :
        super(Decoder, self).__init__()
        self.MLP=nn.Linear(ninp, nout)
-       self.MLF=nn.Linear(backast_size,forecast_size)
+      # self.MLF=nn.Linear(backast_size,forecast_size)
        self.to(device)
 
     def forward(self,x,verbose=False):
         x=self.MLP(x)
         if verbose :
             print('encoder input :', x.shape)
-        output=self.MLF(x.transpose(0,2))
+       # output=self.MLF(x.transpose(0,2))
         if verbose :
             print('encoder output :', output.shape)            
         return(output.transpose(0,2))
@@ -65,6 +66,7 @@ class QuantileLoss(torch.nn.Module):
         mask = (diff.ge(0).float() - self.tau).detach() #-tau or 1-tau
         return (mask * diff).mean()
 
+
 # Define the quantiles we'd like to estimate
 
 quantiles = [0.05, 0.5, 0.95]
@@ -75,15 +77,15 @@ bks=100
 fks=100
 batch_size=50
 step=10
-device='cpu'
-model=TransformerModel(bks,fks,quantiles)
-optimizer=torch.optim.Adam(model.parameters(),lr=1e-4,betas=(0.9,0.98))
+device='cuda:1'
+model=TransformerModel(bks,fks,quantiles,device=device)
+optimizer=torch.optim.Adam(model.parameters(),lr=1e-2)
 name='test1'
 
 # get the data
 
-data_set=register_training_signal(nlimit=0).transpose() #[time_step]x[dim] > [dim]x[time_step]
-data_set=normalize_datas(data_set)
+data_set=register_training_signal(0).transpose()  #[time_step]x[dim] > [dim]x[time_step]y
+data_set=normalize_datas(data_set) 
 x_train, y_train = get_data(bks, fks, step, data_set)
 print('|------------------ xtrain.shape : {} | ', x_train.shape)
 print('|------------------ ytrain.shape : {} | ', y_train.shape)
@@ -97,7 +99,7 @@ if not os.path.exists(path) :
 # Loss for each session :
 losses=[QuantileLoss(tau) for tau in quantiles]
 
-epochs=50
+epochs=500
 log_epoch=1
 store_loss=np.zeros(epochs)
 
@@ -136,5 +138,6 @@ for epoch in range(epochs) :
         print('|---------------- Epoch noumero {} ----------|'.format(epoch))
         print('|---------------- Loss : {} -----------------|'.format(loss_to_store))
         
-# TODO : save the model so obtained
+# save the model so obtained
 
+torch.save(model, './data/{}_model'.format(name))
