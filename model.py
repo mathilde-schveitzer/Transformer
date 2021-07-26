@@ -33,7 +33,7 @@ class TransformerModel(nn.Module):
         self.decoder=Decoder(self.embed_dims, ninp, forecast_size,backast_size,device=device)
         self.parameters = []
         self.parameters = nn.ParameterList(self.parameters)        
-        self.optimizer=torch.optim.Adam(self.parameters(),lr=1e-5)
+        self.optimizer=torch.optim.Adam(self.parameters(),lr=1e-4,amsgrad=True)
         self._loss=F.l1_loss
 
         self.to(self.device)
@@ -85,6 +85,7 @@ class TransformerModel(nn.Module):
             elapsed_time=time.time()-epoch_start_time
 
         # compute and store the loss
+        
             test_loss= self.evaluate(x_test, y_test, batch_size, filename, False)
             train_loss=self.evaluate(x_train, y_train, batch_size, filename, True)
             store_loss[epoch]=train_loss
@@ -93,6 +94,7 @@ class TransformerModel(nn.Module):
             print('train loss-------- : {}'.format(train_loss))
             np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
             np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
+            
             time_[epoch]=time.time()-t0
 
 # subsidiary function, called by fit

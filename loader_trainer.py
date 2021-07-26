@@ -9,15 +9,15 @@ def main(data_name,storage,ninp,device='cpu'):
 
 # create a list containing the names of the models :
     
-    name_NBTR='nbeats_tr_{}'.format(storage)
-    name_NBFC='nbeats_fc_{}'.format(storage)
-    name_TR='transformer_{}'.format(storage)
-    name_TRT2V='transformer_t2v_{}'.format(storage)
+    name_NBTR='transformer_nl1_{}'.format(storage)
+    name_NBFC='transformer_nl2_{}'.format(storage)
+    name_TR='transformer_nl3_{}'.format(storage)
+    name_TRT2V='transformer_nl4_{}'.format(storage)
 
     names=[name_NBTR,name_NBFC,name_TR,name_TRT2V]
-
+   
 # create the directory in which the results will be saved :
-
+    
     storage_paths=['./data/{}'.format(name) for name in names]
 
     for k in range(len(storage_paths)) :
@@ -31,7 +31,7 @@ def main(data_name,storage,ninp,device='cpu'):
 
 # hyperparameters fixed for training session :
 
-    epochs=5
+    epochs=800
     bsz=50
     eval_bsz=50
     backcast_length=100 #to choose according to the set of data loaded above
@@ -43,25 +43,31 @@ def main(data_name,storage,ninp,device='cpu'):
     models=[]
     model=None
     
-    model=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length, block_type='fully_connected')
+#    model=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length, block_type='fully_connected')
+#    models.append(model)
+#    model_=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length, block_type='Tr')
+#    models.append(model)
+    model=TransformerModel(ninp, nhead=2, nhid=32, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=False, device=device)
+    model=TransformerModel(ninp, nhead=2, nhid=32, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=False, device=device)
+    
+    model=TransformerModel(ninp, nhead=2, nhid=32, nlayers=3, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=False, device=device)
     models.append(model)
-    model_=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length, block_type='Tr')
-    models.append(model)
-    model=TransformerModel(ninp, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=False, device=device)
-    models.append(model)
-    model=TransformerModel(ninp, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=True, device=device)
+    model=TransformerModel(ninp, nhead=2, nhid=32, nlayers=4, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=False, device=device)
     models.append(model)
     
     for x in models :
         print("Model structure: ", x, "\n\n")
     
 # training the NBeats models :
-    for k in range(2):
-        models[k].fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], names[k], epochs=epochs, batch_size=bsz)
+    # for k in range(2):
+#         models[k].fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], names[k], epochs=epochs, batch_size=bsz)
 
-# training Transformer models :
-    for k in range(2,len(models)):
-        models[k].fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], bsz, epochs, names[k])
+# # training Transformer models :
+#     for k in range(2,len(models)):
+#         models[k].fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], bsz, epochs, names[k])
+
+    for k in range(len(models)):
+         models[k].fit(xtrain[:,:,:ninp], ytrain[:,:,:ninp], xtest[:,:,:ninp], ytest[:,:,:ninp], bsz, epochs, names[k])
 
 # comment this part if you're not interested in visualizing what are the different models able to predict
 
