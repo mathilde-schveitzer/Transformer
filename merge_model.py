@@ -13,7 +13,7 @@ from torch.nn import TransformerDecoder, TransformerDecoderLayer
 class MergedModel(nn.Module):
 
     def __init__(self, ninp,
-                 nhead=2,
+                 nhead=4,
                  backcast_length=100,
                  forecast_length=100,
                  device=torch.device('cpu')):
@@ -23,7 +23,7 @@ class MergedModel(nn.Module):
 
         self.encoder = NBeatsNet(ninp, forecast_length=forecast_length, backcast_length=backcast_length, device=device)
         self.embed_dims=ninp*nhead
-        decoder_layers = TransformerDecoderLayer(self.embed_dims, nhead, dim_feedforward=128, dropout=0.1, activation='gelu')
+        decoder_layers = TransformerDecoderLayer(self.embed_dims, nhead, dim_feedforward=64, dropout=0.1, activation='gelu')
         self.converter = nn.Linear(ninp, self.embed_dims)
         self.decoder = TransformerDecoder(decoder_layers, num_layers=2)
         self.deconverter = nn.Linear(self.embed_dims, ninp)
@@ -31,7 +31,7 @@ class MergedModel(nn.Module):
 
         self.parameters=[]
         self.parameters=nn.ParameterList(self.parameters)
-        self._opt = torch.optim.Adam(self.parameters(), lr=1e-4, amsgrad=True)
+        self._opt = torch.optim.Adam(self.parameters(), lr=1e-5, amsgrad=True)
         self._loss = F.l1_loss
         self.to(self.device)
 
@@ -40,9 +40,9 @@ class MergedModel(nn.Module):
         
 
     def forward(self, input) :
-        memory,_ = self.encoder(input) # [bsz, forecast_length, ninp]
+        memory,forecast = self.encoder(input) # [bsz, forecast_length, ninp]
         memory=self.converter(memory).transpose(0,1)
-        tgt=self.converter(input).transpose(0,1) # last tgt dimension must be embed_dims
+        tgt=self.converter(forecast).transpose(0,1) # last tgt dimension must be embed_dims
         output=self.decoder(tgt,memory)
         output=self.deconverter(output)
         return(output.transpose(0,1))
