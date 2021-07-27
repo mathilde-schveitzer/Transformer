@@ -73,6 +73,7 @@ class NBeatsNet(nn.Module):
     def fit(self, x_train, y_train, x_test, y_test, filename, epochs=10, batch_size=32):
         store_test_loss=np.zeros(epochs)
         store_loss=np.zeros(epochs)
+        time_=np.zeros(epochs)
         
     # first iteration is done separatedly    
         test_loss= self.evaluate(x_test, y_test, batch_size, filename, False)
@@ -83,7 +84,9 @@ class NBeatsNet(nn.Module):
         print('train loss-------- : {}'.format(train_loss))
         np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
         np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
-           
+
+        t0=time.time()
+        time_[0]=t0
         
         for epoch in range(1,epochs):
 
@@ -97,8 +100,10 @@ class NBeatsNet(nn.Module):
             if epoch % log_epoch == 0 :
                 print('|---------------- Epoch noumero {} ----------|'.format(epoch))
 
+            epoch_start_time=time.time()
             self.do_training(x_train_list, y_train_list)
-
+            elapsed_time=time.time()-epoch_start_time
+            
         # compute and store loss            
             test_loss= self.evaluate(x_test, y_test, batch_size, filename, False)
             train_loss=self.evaluate(x_train, y_train, batch_size, filename, True)
@@ -108,6 +113,8 @@ class NBeatsNet(nn.Module):
             print('train loss-------- : {}'.format(train_loss))
             np.savetxt('./data/{}/train_loss.txt'.format(filename), store_loss)
             np.savetxt('./data/{}/val_loss.txt'.format(filename), store_test_loss)
+
+            time_[epoch]=elapsed_time
             
 # subsidiary function, called by fit
     def do_training(self, xtrain, ytrain) :
@@ -230,7 +237,7 @@ class Block(nn.Module):
             self.fc3 = nn.Linear(units*ninp, units*ninp)
             self.fc4 = nn.Linear(units*ninp, units*ninp)
         else :
-            self.TFC = TransformerModel(ninp,nhead=1, nhid=128, nlayers=4, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.1, t2v=False, device=device)
+            self.TFC = TransformerModel(ninp,nhead=4, nhid=64, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.1, t2v=False, device=device)
             self.fc= nn.Linear(backcast_length*ninp, units*ninp)
         self.device = device
         self.backcast_linspace, self.forecast_linspace = linear_space(backcast_length, forecast_length)
