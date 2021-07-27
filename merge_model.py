@@ -23,7 +23,7 @@ class MergedModel(nn.Module):
 
         self.encoder = NBeatsNet(ninp, forecast_length=forecast_length, backcast_length=backcast_length, device=device)
         self.embed_dims=ninp*nhead
-        decoder_layers = TransformerDecoderLayer(self.embed_dims, nhead, dim_feedforward=256, dropout=0.2, activation='gelu')
+        decoder_layers = TransformerDecoderLayer(self.embed_dims, nhead, dim_feedforward=128, dropout=0.1, activation='gelu')
         self.converter = nn.Linear(ninp, self.embed_dims)
         self.decoder = TransformerDecoder(decoder_layers, num_layers=2)
         self.deconverter = nn.Linear(self.embed_dims, ninp)
