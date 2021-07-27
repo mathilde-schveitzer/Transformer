@@ -9,10 +9,10 @@ def main(data_name,storage,ninp,device='cpu'):
 
 # create a list containing the names of the models :
     
-    name_NBTR='transformer_nl1_{}'.format(storage)
-    name_NBFC='transformer_nl2_{}'.format(storage)
-    name_TR='transformer_nl3_{}'.format(storage)
-    name_TRT2V='transformer_nl4_{}'.format(storage)
+    name_NBTR='transformer_nh1_{}'.format(storage)
+    name_NBFC='transformer_nh2_{}'.format(storage)
+    name_TR='transformer_nh3_{}'.format(storage)
+    name_TRT2V='transformer_nh4_{}'.format(storage)
 
     names=[name_NBTR,name_NBFC,name_TR,name_TRT2V]
    
@@ -31,7 +31,7 @@ def main(data_name,storage,ninp,device='cpu'):
 
 # hyperparameters fixed for training session :
 
-    epochs=800
+    epochs=400
     bsz=50
     eval_bsz=50
     backcast_length=100 #to choose according to the set of data loaded above
@@ -47,12 +47,12 @@ def main(data_name,storage,ninp,device='cpu'):
 #    models.append(model)
 #    model_=NBeatsNet(ninp, device=device, forecast_length=forecast_length, backcast_length=backcast_length, block_type='Tr')
 #    models.append(model)
-    model=TransformerModel(ninp, nhead=2, nhid=32, nlayers=1, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=False, device=device)
     model=TransformerModel(ninp, nhead=2, nhid=32, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=False, device=device)
+    model=TransformerModel(ninp, nhead=2, nhid=64, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=False, device=device)
     
-    model=TransformerModel(ninp, nhead=2, nhid=32, nlayers=3, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=False, device=device)
+    model=TransformerModel(ninp, nhead=2, nhid=128, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=False, device=device)
     models.append(model)
-    model=TransformerModel(ninp, nhead=2, nhid=32, nlayers=4, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=False, device=device)
+    model=TransformerModel(ninp, nhead=2, nhid=256, nlayers=2, backast_size=backcast_length, forecast_size=forecast_length, dropout=0.2, t2v=False, device=device)
     models.append(model)
     
     for x in models :
