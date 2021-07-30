@@ -1,3 +1,4 @@
+import sys
 from matplotlib import pyplot as plt
 import torch
 import argparse
@@ -15,7 +16,7 @@ def main(model_name) :
     model_state_dict=torch.load(model_path, map_location=torch.device('cpu'))
     model=TransformerModel(backast_size, forecast_size, quantiles) # warning : architecture must be the same, make sure you do not change hyperparameters between 2 sessions
     model.load_state_dict(model_state_dict)
-
+    
 # get the data
     step=10
     data_set=register_training_signal(nlimit=0).transpose() #[time_step]x[dim] > [dim]x[time_step]
@@ -24,15 +25,11 @@ def main(model_name) :
     print('|------------------ xtrain.shape : {} | ', x_train.shape) # [N][backast_size][dim]
     print('|------------------ ytrain.shape : {} | ', y_train.shape)
 
- 
-
     x=torch.tensor(x_train[:,:,:],dtype=torch.float)
 
     # compute the quantiles
 
     pred_low = model(x,0).transpose(0,1).detach().numpy()
-    print(pred_low.shape)
-    sys.exit()
 
     median = model(x,1).tranpose(0,1).detach().numpy()
     pred_high = model(x,2).transpose(0,1).detach().numpy()

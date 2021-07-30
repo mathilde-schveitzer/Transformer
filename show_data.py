@@ -11,22 +11,17 @@ def main(signal, datatype, dim=[], test=False, signal2=''):
     fig=plt.figure()
 
     if datatype=='loss':
-        train_pass='./data/{}/train_loss.txt'.format(signal)
-        val_pass='./data/{}/val_loss.txt'.format(signal)
-        numpy_train=np.loadtxt(train_pass)
-        numpy_val=np.loadtxt(val_pass)
-        plt.plot(numpy_train,label= 'Erreur sur le training test')
-        plt.plot(numpy_val, label='Erreur sur le validation test')
-
-        if signal2!='' :
-             train_pass_='./data/{}/train_loss.txt'.format(signal2)
-             val_pass_='./data/{}/val_loss.txt'.format(signal2)
-             numpy_train_=np.loadtxt(train_pass_)
-             numpy_val_=np.loadtxt(val_pass_)
-             plt.plot(numpy_train_,label= 'Erreur sur le training test : avec positional encoding')
-             plt.plot(numpy_val_, label='Erreur sur le validation test : avec positional encoding')
-
-
+        for k,signal in enumerate(signals) :
+            train_pass='./data/{}/train_loss.txt'.format(signal)
+            val_pass='./data/{}/val_loss.txt'.format(signal)
+            numpy_train=np.loadtxt(train_pass)
+            numpy_val=np.loadtxt(val_pass)
+#            plt.plot(numpy_val,label= 'Erreur sur le validation test : {}'.format(signal))
+            if k==0 : plt.plot(numpy_val, label='Erreur sur le validation test : Nbeats ')
+            if k==1 : plt.plot(numpy_val, label='Erreur sur le validation test : Transformer')
+            if k==2 : plt.plot(numpy_val, label='Erreur sur le validation test : nhidd=128')
+            if k==3 : plt.plot(numpy_val, label='Erreur sur le validation test : nhidd=256')
+            
     if datatype=='pos_encod':
         name=signal+'_encod'
         name_=signal+'2'
@@ -47,28 +42,30 @@ def main(signal, datatype, dim=[], test=False, signal2=''):
 
     if datatype=='prediction':
 
-        predict_path='./data/{}/predictions_train.pt'.format(signal)
-        xtrain_path='./data/{}/xtrain.pt'.format(signal)
-        ytrain_path='./data/{}/ytrain.pt'.format(signal)
-        
-        
-        prediction=torch.load(predict_path,map_location=torch.device('cpu')) # [nb]x[forecast_size]x[dim]
+        predictions=[]
+        for i in range(1,len(signal)):
+            predict_path='./data/{}/predictions_train.pt'.format(signal[i])
+            prediction=torch.load(predict_path,map_location=torch.device('cpu')) # [nb]x[forecast_size]x[dim]
+            predictions.append(prediction)
+            
+        xtrain_path='./data/{}/xtest.pt'.format(signal[0])
+        ytrain_path='./data/{}/ytest.pt'.format(signal[0])
         data=torch.load(xtrain_path, map_location=torch.device('cpu'))
         target=torch.load(ytrain_path, map_location=torch.device('cpu'))
 
-        print(prediction.shape)
-        print(data.shape)
-
-           # k=random.randrange(prediction.shape[0])
-        k=0
-
-
-        for i in dim :
-            to_predict=prediction[:,:,i].detach().numpy()
-            converted_data=data[:,:,i].numpy()
-            converted_target=target[:,:,i].numpy()
-            plt.plot(merge_line(converted_data,to_predict,k),label='prediction # signal {}'.format(i))
-            plt.plot(merge_line(converted_data,converted_target,k),label='target # signal {}'.format(i))
+        k=random.randrange(prediction.shape[0])
+        #k=2
+        print(k)
+        for x,prediction in enumerate(predictions) :
+            for i in dim :
+                to_predict=prediction[:,:,i]
+                converted_data=data[:,:,i]
+                converted_target=target[:,:,i]
+            if x==0 :
+                plt.plot(merge_line(converted_data,to_predict,k),label='predicted with Nbeats')
+                plt.plot(merge_line(converted_data,converted_target,k),label='target')
+            if x==1 :
+                plt.plot(merge_line(converted_data, to_predict, k), label='predicted with Transformer')
 
                 
     if datatype=='whole_prediction':
@@ -100,11 +97,32 @@ if __name__ == '__main__' :
     parser.add_argument('-dimension', help='List of dim you wanna plot, example : 1,2,3 ')
     parser.add_argument('-test', help='set to true if you want to analyse the testing set (default training set)')
     parser.add_argument('-name2', help='If you want to compare two different signals')
+    parser.add_argument('-name3', help='If you want to compare three different signals')
+    parser.add_argument('-name4', help='If you want to compare four different signals (loss only)')
     args=parser.parse_args()
 
     def to_list(blabla) :
         return([int(s) for s in blabla if s!=','])
-    
+    if args.data_type=='loss' :
+        signals=[]
+        signals.append(args.name)   
+        if args.name2 :
+            signals.append(args.name2)
+            if args.name3 :
+                signals.append(args.name3)
+                if args.name4 :
+                    signals.append(args.name4)
+        main(signals, args.data_type)
+    if args.data_type=='prediction' :
+        signals=[]
+        signals.append(args.name)   
+        if args.name2 :
+            signals.append(args.name2)
+            if args.name3 :
+                signals.append(args.name3)
+                if args.name4 :
+                    signals.append(args.name4)
+        main(signals, args.data_type, dim=to_list(args.dimension))
     if args.dimension :
         if args.test :
             if args.name2 :
